@@ -1,0 +1,52 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - jq
+
+runcmd:
+  # 1. Initialize local data directory on VM boot disk (ephemeral lifecycle)
+  - mkdir -p /data
+  - chown -R 10001:10001 /data
+
+  # 2. Install Docker
+  - mkdir -p /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+  # 3. Create Docker Compose configuration
+  - mkdir -p /opt/orchid
+  - |
+    cat << 'EOF' > /opt/orchid/docker-compose.yml
+    version: '3.9'
+    services:
+      proxy:
+        image: gcr.io/${GCP_PROJECT}/orchid-proxy:latest
+        container_name: orchid-proxy
+        restart: always
+        ports:
+          - "4320:4320"
+          - "4321:4321"
+        environment:
+          ORCHID_BIND_HOST: 0.0.0.0
+          ORCHID_API_KEY: "${ORCHID_API_KEY}"
+          ORCHID_DB_PATH: /data/orchid.db
+        volumes:
+          - /data:/data
+    EOF
+
+  # 4. Authenticate Docker with GCR using VM's instance metadata token
+  - |
+    TOKEN=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token | jq -r .access_token)
+    echo "$TOKEN" | docker login -u oauth2accesstoken --password-stdin https://gcr.io
+
+  # 5. Launch the proxy
+  - cd /opt/orchid && docker compose up -d
