@@ -1,5 +1,7 @@
 # Orchid — Record, Inspect, Replay AI Agents
 
+[Orchid Website](https://orchidtrace.xyz)
+
 **Stop grepping logs.** Orchid records your agent's network traffic — LLM calls, tool invocations, and any other API your agent talks to — through a zero-instrumentation proxy, then lets you time-travel through completed runs, inspect every payload, and debug failures step-by-step — in the proxy's built-in web UI or via MCP tools from your IDE.
 
 **Orchid gives your coding agent the ability to debug your AI app.** The proxy has a built-in MCP server, so when an LLM call is buried deep in your stack — behind a framework, a queue, three layers of abstraction — your AI assistant in Cursor, VS Code, or Claude Desktop can query the recorded traffic directly and see exactly what prompts went out and what came back, allowing your local agent to reason about the response and address issues immediately. No print statements, no log spelunking: ask your agent "why did this run fail?" and it can go look, figure out why it happened, and fix it for you.
