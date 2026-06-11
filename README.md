@@ -12,6 +12,63 @@ You choose how much to record: route only your LLM traffic through the proxy for
 
 ---
 
+## How It Works
+
+```
+  ┌──────────────────────────────────────────────────────────┐
+  │                   Developer Machine                      │
+  │                                                          │
+  │  ┌───────────────┐        ┌──────────────────┐           │
+  │  │  Application  │        │   orchid-proxy   │           │
+  │  │  (Python, TS, │───────▶│                  │           │
+  │  │   Rust, ...)  │ HTTP   │  :4320 (proxy)   │           │
+  │  └───────────────┘        │  :4321 (query)   │           │
+  │                           └────────┬─────────┘           │
+  │                                    │ SQLite              │
+  │                                    ▼                     │
+  │                           ┌────────────────┐             │
+  │                           │   orchid.db    │             │
+  │                           └────────────────┘             │
+  └──────────────────────────────────────────────────────────┘
+```
+
+### Non-Intrusive Interception (Thin SDK)
+
+Unlike traditional LLM observability tools that require wrapping every client initialization or using heavy SDKs with AST modifications, Orchid uses an **APM-style Thin SDK**. The SDK patches the foundational HTTP transport layer (`httpx`/`requests` in Python, `fetch` in Node, `reqwest` middleware in Rust), so every LLM call made by standard client libraries is automatically routed through the local or remote Orchid Proxy — without changing your prompt-handling or generation code.
+
+### Header-Driven State Machine
+
+The proxy is stateless about your application. It reads `X-Orchid-*` HTTP headers (injected by the SDK, or set manually from any language) to decide how to process each request:
+
+*   **`passthrough`**: Transparent reverse proxy. Forwards the request and returns the response without writing anything to disk.
+*   **`capture`**: Forwards the request, serializes the complete request/response payloads (including streaming chunks), calculates costs, and saves them to a local SQLite database under a specific `Session ID`.
+*   **`replay`**: Blocks all outbound network traffic. Hashes the incoming request and serves the exact matching recorded response from SQLite. If no match is found, returns a deterministic mock error.
+
+---
+
+## Key Features
+
+### Forensic Capture
+Every captured LLM call (or "Exchange") records:
+*   **Request Metadata**: System prompts, user prompts, temperature, top-p, and custom tags.
+*   **Response Telemetry**: Complete completion text, usage tokens (input/output), and latency.
+*   **Cost Calculation**: Real-time USD cost attribution based on up-to-date model pricing maps.
+*   **Stream Reassembly**: For streaming completions, Orchid buffers SSE chunks in memory, serving them to the client instantly, and writes the fully reassembled completion body to SQLite.
+
+### Deterministic Mock Replays
+Writing mocks for LLM calls in tests is notoriously fragile and tedious. Orchid converts mock management into a simple recording flow:
+1.  Run your test suite once in `capture` mode to generate a JSON fixture.
+2.  Commit the fixture to your repository.
+3.  Run CI in `replay` mode using the fixture. Your tests now execute instantly, offline, and with zero API cost.
+
+### Embedded Visualizer Dashboard
+The proxy embeds a React-based dashboard on port `4321` — nothing extra to install. Search and filter exchanges by model, provider, status, or prompt keywords; compare token usage and costs across sessions; export sessions as portable JSON fixtures.
+
+### MCP Server for AI Assistants
+A built-in **MCP server** (SSE) lets AI assistants like Cursor, VS Code, or Claude Desktop query the recorded traffic directly: analyze prompt performance, pull token/cost statistics, or fetch payload examples as context for editing code.
+
+---
+
 ## Quick Start: Run the Orchid Proxy
 
 The proxy ships as a multi-arch container image (Apple Silicon `arm64` and Linux `amd64`):
@@ -41,7 +98,9 @@ docker run -d \
 
 ### 3. Point your app at the proxy
 
-Use the SDKs in this repository ([sdk/python/](sdk/python/), [sdk/rust/](sdk/rust/)) or simply set your client's base URL to the proxy — for your LLM provider, and for any other APIs you want recorded. Route everything through the proxy if you want full-fidelity replay. See [docs/deploy_and_setup.md](docs/deploy_and_setup.md) for full instructions, including cloud deployment templates (AWS / GCP / Azure).
+Use the SDKs in this repository ([sdk/python/](sdk/python/), [sdk/typescript/](sdk/typescript/), [sdk/rust/](sdk/rust/)) or simply set your client's base URL to the proxy — for your LLM provider, and for any other APIs you want recorded. Route everything through the proxy if you want full-fidelity replay. See [docs/deploy_and_setup.md](docs/deploy_and_setup.md) for full instructions, including cloud deployment templates (AWS / GCP / Azure).
+
+Using Go, Java, Ruby, or anything else? No SDK needed — the proxy is header-driven, so any HTTP client works. See [docs/any_language_integration.md](docs/any_language_integration.md).
 
 ### 4. Connect your AI assistant (MCP)
 
@@ -54,6 +113,7 @@ Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your cod
 | Path | Contents |
 | --- | --- |
 | `sdk/python/` | Python instrumentation SDK |
+| `sdk/typescript/` | TypeScript instrumentation SDK (Node 18+) |
 | `sdk/rust/` | Rust instrumentation SDK |
 | `docs/` | Deployment, setup, and integration guides |
 

@@ -1,5 +1,7 @@
 # Welcome to Orchid 🌸
 
+[Orchid Website](https://orchidtrace.xyz)
+
 Orchid is a lightweight, zero-dependency **Forensic Telemetry & Mock Replay Engine for LLM Applications**. 
 
 If you are developing applications using LLM providers (like OpenAI, Anthropic, or Google Gemini), Orchid acts as a local or remote network-level sidecar that records every exchange, computes costs, and enables offline, deterministic testing with zero code-level mocking.
@@ -73,3 +75,4 @@ Orchid exposes a built-in **MCP Server** via a Server-Sent Events (SSE) stream. 
 To deploy the proxy and start collecting data, proceed to the:
 👉 **[Developer Deployment & Setup Guide](./deploy_and_setup.md)**
 👉 **[Storage Persistence & Network Mount Guide](./storage_persistence.md)**
+👉 **[Using Orchid From Any Language (No SDK Required)](./any_language_integration.md)**
