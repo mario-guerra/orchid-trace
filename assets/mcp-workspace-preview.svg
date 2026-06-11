@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 424" width="720" height="424" role="img" aria-label="An IDE AI assistant debugging a RAG hallucination by calling Orchid MCP tools">
+<style>@keyframes s1{0%,21.4%{opacity:0}23.6%,100%{opacity:1}}
+@keyframes s2{0%,42.8%{opacity:0}45%,100%{opacity:1}}
+@keyframes s3{0%,64.2%{opacity:0}66.4%,100%{opacity:1}}
+.s1{animation:s1 14s linear infinite}
+.s2{animation:s2 14s linear infinite}
+.s3{animation:s3 14s linear infinite}
+@keyframes scrl{0%,42.8%{transform:translateY(0)}45.6%,64.2%{transform:translateY(-200px)}67%,100%{transform:translateY(-372px)}}
+.scrl{animation:scrl 14s linear infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.blink{animation:blink 1.6s ease-in-out infinite}</style>
+<defs><clipPath id="mframe"><rect width="720" height="424" rx="12"/></clipPath><clipPath id="mbody"><rect y="44" width="720" height="380"/></clipPath></defs>
+<g clip-path="url(#mframe)">
+<rect width="720" height="424" fill="#0c0c0f"/>
+<rect width="720" height="44" fill="#121214"/>
+<line x1="0" y1="44" x2="720" y2="44" stroke="#18181b"/>
+<circle cx="24" cy="22" r="5.5" fill="#ef4444" opacity="0.8"/>
+<circle cx="41" cy="22" r="5.5" fill="#eab308" opacity="0.8"/>
+<circle cx="58" cy="22" r="5.5" fill="#22c55e" opacity="0.8"/>
+<path d="M84 16 l1.8 4.4 4.4 1.8 -4.4 1.8 -1.8 4.4 -1.8 -4.4 -4.4 -1.8 4.4 -1.8 Z" fill="#a78bfa"/>
+<text x="96" y="26" font-size="12" fill="#a1a1aa" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">AI Assistant — Agentic MCP Workspace</text>
+<rect x="572" y="13" width="132" height="18" rx="4" fill="rgba(39,39,42,0.6)"/>
+<text x="638.0" y="26" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" text-anchor="middle" xml:space="preserve">orchid-proxy v0.8.2</text>
+<g clip-path="url(#mbody)"><g class="scrl">
+<circle cx="30" cy="74" r="10" fill="#27272a"/><text x="30" y="77.5" font-size="9" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600" text-anchor="middle" xml:space="preserve">U</text>
+<rect x="48" y="64" width="652" height="72" rx="8" fill="rgba(20,20,22,0.6)" stroke="rgba(24,24,27,0.8)"/><text x="60" y="87" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">My RAG app hallucinated the Q3 revenue numbers. Use Orchid to find the exchange</text><text x="60" y="105" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">where it answered the Q3 question and check what context the vector DB actually</text><text x="60" y="123" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">injected into the prompt.</text>
+<g class="s1">
+<circle cx="30" cy="164" r="10" fill="rgba(46,16,101,0.4)" stroke="rgba(76,29,149,0.3)"/><text x="30" y="167.5" font-size="9" fill="#a78bfa" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600" text-anchor="middle" xml:space="preserve">AI</text>
+<text x="48" y="167" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">I will search the proxy capture logs for the Q3 question to inspect the raw LLM</text>
+<text x="48" y="185" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">payload over the wire.</text>
+<rect x="48" y="198" width="652" height="102" rx="8" fill="rgba(46,16,101,0.1)" stroke="rgba(76,29,149,0.3)"/>
+<path d="M48 224 h652" stroke="rgba(76,29,149,0.2)"/>
+<g stroke="#a78bfa" stroke-width="1.2" fill="none"><rect x="60" y="206" width="10" height="10" rx="2"/><rect x="63" y="209" width="4" height="4"/></g>
+<text x="78" y="215" font-size="11" fill="#a78bfa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">Calling Tool: mcp_orchid-proxy_search_exchanges</text>
+<rect x="644" y="204" width="44" height="15" rx="3" fill="rgba(139,92,246,0.1)"/>
+<text x="666" y="215" font-size="10" fill="#a78bfa" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle" xml:space="preserve">Active</text>
+<text x="62" y="242" font-size="11" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">{</text>
+<text x="62" y="258" font-size="11" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">  "session_id": "sess_rag_prod_09",</text>
+<text x="62" y="274" font-size="11" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">  "query": "Q3 revenue"</text>
+<text x="62" y="290" font-size="11" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">}</text>
+</g>
+<g class="s2">
+<rect x="76" y="318" width="624" height="293" rx="8" fill="rgba(2,44,34,0.06)" stroke="rgba(6,78,59,0.3)"/>
+<path d="M76 344 h624" stroke="rgba(6,78,59,0.25)"/>
+<g stroke="#34d399" stroke-width="1.3" fill="none"><circle cx="94" cy="331" r="5.5"/><path d="M91.5 331 l1.8 1.8 3.2 -3.6"/></g>
+<text x="106" y="335" font-size="11" fill="#34d399" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">Tool Response (Stdout)</text>
+<text x="688" y="335" font-size="10" fill="#71717a" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" text-anchor="end" xml:space="preserve">12ms</text>
+<text x="90" y="361" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">{</text>
+<text x="90" y="376" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">  "matches": [</text>
+<text x="90" y="391" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">    {</text>
+<text x="90" y="406" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">      "exchange_id": "exch_8f92a",</text>
+<text x="90" y="421" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">      "model": "gpt-5.4",</text>
+<text x="90" y="436" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">      "request_body": {</text>
+<text x="90" y="451" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">        "messages": [</text>
+<text x="90" y="466" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">          {"role": "system", "content": "Context: [Doc_Q2_Report: Q2 revenue was $4.2M...]"},</text>
+<text x="90" y="481" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">          {"role": "user", "content": "What was the Q3 revenue?"}</text>
+<text x="90" y="496" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">        ]</text>
+<text x="90" y="511" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">      },</text>
+<text x="90" y="526" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">      "response_body": {</text>
+<text x="90" y="541" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">        "content": "Based on the context provided, the Q3 revenue was $4.2M."</text>
+<text x="90" y="556" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">      }</text>
+<text x="90" y="571" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">    }</text>
+<text x="90" y="586" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">  ]</text>
+<text x="90" y="601" font-size="10" fill="#a1a1aa" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">}</text>
+</g>
+<g class="s3">
+<circle cx="30" cy="639" r="10" fill="rgba(46,16,101,0.4)" stroke="rgba(76,29,149,0.3)"/><text x="30" y="642.5" font-size="9" fill="#a78bfa" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600" text-anchor="middle" xml:space="preserve">AI</text>
+<rect x="48" y="629" width="652" height="126" rx="8" fill="rgba(24,24,27,0.3)" stroke="#18181b"/><text x="60" y="652" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">I found the root cause! The LLM didn't hallucinate — your RAG pipeline retrieved</text><text x="60" y="670" font-size="12" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve"><tspan fill="#d4d4d8">the wrong chunk. The vector search injected the </tspan><tspan fill="#a78bfa" font-weight="600">Q2 Revenue Report</tspan><tspan fill="#d4d4d8"> into the system</tspan></text><text x="60" y="688" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">prompt context instead of the Q3 document. The LLM simply regurgitated the $4.2M</text><text x="60" y="706" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">figure from Q2.</text><text x="60" y="724" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve"></text><text x="60" y="742" font-size="12" fill="#d4d4d8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve">You should check your vector DB distance metric or chunking strategy.</text>
+<rect class="blink" x="60" y="765" width="7" height="13" fill="#a78bfa" opacity="0.8"/>
+</g>
+</g></g>
+</g>
+<rect x="0.5" y="0.5" width="719" height="423" rx="12" fill="none" stroke="#27272a"/>
+</svg>

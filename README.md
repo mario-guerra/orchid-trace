@@ -77,8 +77,16 @@ Because replay serves responses from the local recording with near-zero latency,
 ### Embedded Visualizer Dashboard
 The proxy embeds a React-based dashboard on port `4321` — nothing extra to install. Search and filter exchanges by model, provider, status, or prompt keywords; compare token usage and costs across sessions; export sessions as portable JSON fixtures.
 
+<p align="center">
+  <img src="assets/web-visualizer-preview.svg" alt="Animated preview of the Orchid web visualizer: an exchange timeline on the left cycling through recorded LLM and tool calls, with the inspector on the right showing provider, status, latency, tokens, and syntax-highlighted JSON output for each exchange" width="880" />
+</p>
+
 ### MCP Server for AI Assistants
 A built-in **MCP server** (SSE) lets AI assistants like Cursor, VS Code, or Claude Desktop query the recorded traffic directly: analyze prompt performance, pull token/cost statistics, or fetch payload examples as context for editing code.
+
+<p align="center">
+  <img src="assets/mcp-workspace-preview.svg" alt="Animated preview of an IDE AI assistant debugging a RAG hallucination: the agent calls the Orchid MCP search_exchanges tool, inspects the recorded request payload, and discovers the vector DB injected the wrong document into the prompt context" width="720" />
+</p>
 
 ---
 
