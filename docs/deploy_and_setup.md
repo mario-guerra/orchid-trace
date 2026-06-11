@@ -109,7 +109,7 @@ Because `orchid-proxy` is compiled as a native, single-threaded/async Rust binar
 #### 1. Compute Allocation (CPU & RAM)
 *   **Minimum Baseline**: `0.25 vCPU` and `512 MB RAM`. This is sufficient for small teams or local testing.
 *   **Production Standard**: `0.5 vCPU` and `1 GB RAM`. This can easily handle hundreds of concurrent proxy connections and visualizer sessions.
-*   **Scaling Policy**: Do not configure auto-scaling policies that scale the container beyond 1 instance if you are using SQLite. SQLite only supports safe concurrent writes from a single process; multiple container instances writing to the same SQLite file on a network share can lead to database locking/corruption.
+*   **Scaling Policy**: Run exactly **1 instance**. The proxy stores all telemetry in an embedded SQLite database, which only supports safe concurrent writes from a single process — multiple container instances writing to the same database file on a network share can cause locking errors or corruption. Do not configure auto-scaling beyond 1 replica.
 
 #### 2. Storage Estimation
 SQLite database growth depends directly on your request/response size and your retention rules:
