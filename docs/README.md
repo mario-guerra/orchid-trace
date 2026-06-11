@@ -6,6 +6,14 @@ Orchid is a lightweight, zero-dependency **Forensic Telemetry & Mock Replay Engi
 
 If you are developing applications using LLM providers (like OpenAI, Anthropic, or Google Gemini), Orchid acts as a local or remote network-level sidecar that records every exchange, computes costs, and enables offline, deterministic testing with zero code-level mocking.
 
+> [!IMPORTANT]
+> **Your data never leaves your infrastructure.** Orchid is not a data exfiltration vector:
+>
+> *   The proxy forwards requests **only** to the upstream APIs your app was already calling.
+> *   Everything recorded stays in a local SQLite database inside the container (or your mounted volume). No phone-home, no telemetry, no cloud backend.
+> *   Secrets are scrubbed in memory **before** anything is written to disk: `Authorization` headers are forwarded untouched to the upstream but never stored, and headers, query strings, and body fields with secret-like names (keys, tokens, passwords, credentials, cookies) are stored as `[REDACTED]`.
+> *   One honest caveat: redaction is name-based. Prompt and completion *text* is recorded as-is — that's the whole point — so secrets pasted into prompt content are stored like any other prompt content.
+
 ---
 
 ## 1. Core Concepts

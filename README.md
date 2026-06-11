@@ -2,13 +2,26 @@
 
 [Orchid Website](https://orchidtrace.xyz)
 
-**Stop grepping logs.** Orchid records your agent's network traffic — LLM calls, tool invocations, and any other API your agent talks to — through a zero-instrumentation proxy, then lets you time-travel through completed runs, inspect every payload, and debug failures step-by-step — in the proxy's built-in web UI or via MCP tools from your IDE.
+**Stop grepping logs.** Orchid records your agent's network traffic — LLM calls, tool invocations, and any other API your agent talks to — through a zero-instrumentation proxy. Then it lets you:
 
-**Orchid gives your coding agent the ability to debug your AI app.** The proxy has a built-in MCP server, so when an LLM call is buried deep in your stack — behind a framework, a queue, three layers of abstraction — your AI assistant in Cursor, VS Code, or Claude Desktop can query the recorded traffic directly and see exactly what prompts went out and what came back, allowing your local agent to reason about the response and address issues immediately. No print statements, no log spelunking: ask your agent "why did this run fail?" and it can go look, figure out why it happened, and fix it for you.
+*   **Time-travel** through completed runs, step by step
+*   **Inspect** every prompt, response, token count, and cost
+*   **Debug** failures in the built-in web UI or via MCP tools from your IDE
+*   **Replay** recorded runs offline — deterministic tests with zero API cost
+
+**Orchid gives your coding agent the ability to debug your AI app.** The proxy has a built-in MCP server, so when an LLM call is buried deep in your stack — behind a framework, a queue, three layers of abstraction — your AI assistant in Cursor, VS Code, or Claude Desktop can query the recorded traffic directly. No print statements, no log spelunking: ask your agent *"why did this run fail?"* and it can go look, figure out why, and fix it for you.
 
 You choose how much to record: route only your LLM traffic through the proxy for lightweight inspection, or capture everything for the full picture. To **replay** a run with perfect fidelity, all of the agent's network traffic must go through the proxy — replay works by serving back the recorded responses, so anything that wasn't recorded can't be replayed.
 
 > This repository contains the open-source Orchid SDKs and user documentation. The `orchid-proxy` container is distributed via the GitHub Container Registry (see below). Content here is synced automatically from the main development repository — issues and discussions are welcome; pull requests may be ported rather than merged directly.
+
+> [!IMPORTANT]
+> **Your data never leaves your infrastructure.** Orchid is not a data exfiltration vector:
+>
+> *   The proxy forwards requests **only** to the upstream APIs your app was already calling.
+> *   Everything recorded stays in a local SQLite database inside the container (or your mounted volume). No phone-home, no telemetry, no cloud backend.
+> *   Secrets are scrubbed in memory **before** anything is written to disk: `Authorization` headers are forwarded untouched to the upstream but never stored, and headers, query strings, and body fields with secret-like names (keys, tokens, passwords, credentials, cookies) are stored as `[REDACTED]`.
+> *   One honest caveat: redaction is name-based. Prompt and completion *text* is recorded as-is — that's the whole point — so secrets pasted into prompt content are stored like any other prompt content.
 
 ---
 
