@@ -13,9 +13,7 @@
 
 You choose how much to record: route only your LLM traffic through the proxy for lightweight inspection, or capture everything for the full picture. To **replay** a run with perfect fidelity, all of the agent's network traffic must go through the proxy — replay works by serving back the recorded responses, so anything that wasn't recorded can't be replayed.
 
-> **IMPORTANT!**
->
-> **Your data never leaves your infrastructure.** Orchid is not a data exfiltration vector!
+> **IMPORTANT NOTE - YOUR DATA _NEVER_ LEAVES YOUR INFRASTRUCTURE!** 
 >
 > *   The proxy forwards requests **only** to the upstream APIs your app was already calling.
 > *   Everything recorded stays in a local SQLite database inside the container (or your mounted volume). No phone-home, no telemetry, no cloud backend.
