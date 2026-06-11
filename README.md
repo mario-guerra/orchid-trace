@@ -13,36 +13,34 @@
 
 You choose how much to record: route only your LLM traffic through the proxy for lightweight inspection, or capture everything for the full picture. To **replay** a run with perfect fidelity, all of the agent's network traffic must go through the proxy — replay works by serving back the recorded responses, so anything that wasn't recorded can't be replayed.
 
-> This repository contains the open-source Orchid SDKs and user documentation. The `orchid-proxy` container is distributed via the GitHub Container Registry (see below). Content here is synced automatically from the main development repository — issues and discussions are welcome; pull requests may be ported rather than merged directly.
-
-> [!IMPORTANT]
-> **Your data never leaves your infrastructure.** Orchid is not a data exfiltration vector:
+> **IMPORTANT!**
+>
+> **Your data never leaves your infrastructure.** Orchid is not a data exfiltration vector!
 >
 > *   The proxy forwards requests **only** to the upstream APIs your app was already calling.
 > *   Everything recorded stays in a local SQLite database inside the container (or your mounted volume). No phone-home, no telemetry, no cloud backend.
 > *   Secrets are scrubbed in memory **before** anything is written to disk: `Authorization` headers are forwarded untouched to the upstream but never stored, and headers, query strings, and body fields with secret-like names (keys, tokens, passwords, credentials, cookies) are stored as `[REDACTED]`.
-> *   One honest caveat: redaction is name-based. Prompt and completion *text* is recorded as-is — that's the whole point — so secrets pasted into prompt content are stored like any other prompt content.
+> *   One honest caveat: redaction works by recognizing field *names* (like `api_key` or `authorization`), not by scanning the contents of your prompts. Prompt and completion text is recorded verbatim — that's the whole point of Orchid — so if a secret is pasted into a prompt, it will be stored along with the rest of the prompt text.
+
+
+This repository contains the open-source Orchid SDKs and user documentation. The `orchid-proxy` container is distributed via the GitHub Container Registry (see below). Content here is synced automatically from the main development repository — issues and discussions are welcome; pull requests may be ported rather than merged directly.
 
 ---
 
 ## How It Works
 
-```
-  ┌──────────────────────────────────────────────────────────┐
-  │                   Developer Machine                      │
-  │                                                          │
-  │  ┌───────────────┐        ┌──────────────────┐           │
-  │  │  Application  │        │   orchid-proxy   │           │
-  │  │  (Python, TS, │───────▶│                  │           │
-  │  │   Rust, ...)  │ HTTP   │  :4320 (proxy)   │           │
-  │  └───────────────┘        │  :4321 (query)   │           │
-  │                           └────────┬─────────┘           │
-  │                                    │ SQLite              │
-  │                                    ▼                     │
-  │                           ┌────────────────┐             │
-  │                           │   orchid.db    │             │
-  │                           └────────────────┘             │
-  └──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph env["Your Environment (laptop, on-prem, or your own cloud)"]
+        app["Application<br/>(Python, TS, Rust, ...)"]
+        proxy["orchid-proxy<br/>:4320 (proxy)<br/>:4321 (query / UI / MCP)"]
+        db[("orchid.db<br/>(SQLite)")]
+        app -- "HTTP" --> proxy
+        proxy -- "record" --> db
+        db -. "replay" .-> proxy
+    end
+    upstream["Upstream APIs<br/>OpenAI, Anthropic,<br/>Gemini, tools, any API ..."]
+    proxy -- "HTTPS<br/>(skipped in replay mode)" --> upstream
 ```
 
 ### Non-Intrusive Interception (Thin SDK)
@@ -73,6 +71,8 @@ Writing mocks for LLM calls in tests is notoriously fragile and tedious. Orchid 
 1.  Run your test suite once in `capture` mode to generate a JSON fixture.
 2.  Commit the fixture to your repository.
 3.  Run CI in `replay` mode using the fixture. Your tests now execute instantly, offline, and with zero API cost.
+
+Because replay serves responses from the local recording with near-zero latency, it also isolates **your own code's performance**: profile or benchmark your agent logic with network calls and upstream API variance taken out of the equation, and get reproducible numbers run after run.
 
 ### Embedded Visualizer Dashboard
 The proxy embeds a React-based dashboard on port `4321` — nothing extra to install. Search and filter exchanges by model, provider, status, or prompt keywords; compare token usage and costs across sessions; export sessions as portable JSON fixtures.

@@ -12,7 +12,7 @@ If you are developing applications using LLM providers (like OpenAI, Anthropic, 
 > *   The proxy forwards requests **only** to the upstream APIs your app was already calling.
 > *   Everything recorded stays in a local SQLite database inside the container (or your mounted volume). No phone-home, no telemetry, no cloud backend.
 > *   Secrets are scrubbed in memory **before** anything is written to disk: `Authorization` headers are forwarded untouched to the upstream but never stored, and headers, query strings, and body fields with secret-like names (keys, tokens, passwords, credentials, cookies) are stored as `[REDACTED]`.
-> *   One honest caveat: redaction is name-based. Prompt and completion *text* is recorded as-is — that's the whole point — so secrets pasted into prompt content are stored like any other prompt content.
+> *   One honest caveat: redaction works by recognizing field *names* (like `api_key` or `authorization`), not by scanning the contents of your prompts. Prompt and completion text is recorded verbatim — that's the whole point of Orchid — so if a secret is pasted into a prompt, it will be stored along with the rest of the prompt text.
 
 ---
 
@@ -33,22 +33,18 @@ Orchid does not manage application state. Instead, it reads dynamic HTTP headers
 
 ## 2. Key Features
 
-```
-  ┌──────────────────────────────────────────────────────────┐
-  │                   Developer Machine                      │
-  │                                                          │
-  │  ┌───────────────┐        ┌──────────────────┐           │
-  │  │  Application  │        │   orchid-proxy   │           │
-  │  │  (Python, JS) │───────▶│                  │           │
-  │  │               │ HTTP   │  :4320 (proxy)   │           │
-  │  └───────────────┘        │  :4321 (query)   │           │
-  │                           └────────┬─────────┘           │
-  │                                    │ SQLite              │
-  │                                    ▼                     │
-  │                           ┌────────────────┐             │
-  │                           │   orchid.db    │             │
-  │                           └────────────────┘             │
-  └──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph env["Your Environment (laptop, on-prem, or your own cloud)"]
+        app["Application<br/>(Python, JS)"]
+        proxy["orchid-proxy<br/>:4320 (proxy)<br/>:4321 (query / UI / MCP)"]
+        db[("orchid.db<br/>(SQLite)")]
+        app -- "HTTP" --> proxy
+        proxy -- "record" --> db
+        db -. "replay" .-> proxy
+    end
+    upstream["Upstream APIs<br/>OpenAI, Anthropic,<br/>Gemini, tools, any API ..."]
+    proxy -- "HTTPS<br/>(skipped in replay mode)" --> upstream
 ```
 
 ### 1. Forensic Capture
@@ -63,6 +59,8 @@ Writing mocks for LLM calls in unit/integration tests is notoriously fragile and
 1.  Run your test suite once in `capture` mode to generate a JSON fixture.
 2.  Commit the fixture to your repository.
 3.  Configure your CI/CD pipeline to run in `replay` mode using the fixture. Your tests now execute instantly, offline, and with zero API cost.
+
+Because replay serves responses from the local recording with near-zero latency, it also isolates **your own code's performance**: profile or benchmark your agent logic with network calls and upstream API variance taken out of the equation, and get reproducible numbers run after run.
 
 ### 3. Embedded Visualizer Dashboard
 The proxy Axum server embeds a React-based SPA that serves a dashboard on port `4321`. This allows you to:
