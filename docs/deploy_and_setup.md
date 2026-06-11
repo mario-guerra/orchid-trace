@@ -93,7 +93,7 @@ gcloud compute ssh <VM_NAME> --zone <ZONE> --tunnel-through-iap \
 With the tunnel up:
 *   **Dashboard / Query API**: browse `http://localhost:4321`
 *   **Agents / SDK**: point `ORCHID_PROXY_URL` at `http://localhost:4320` and `ORCHID_QUERY_URL` at `http://localhost:4321`
-*   **MCP clients**: use `http://localhost:4321/v1/mcp/sse`
+*   **MCP clients**: use `http://localhost:4321/v1/mcp` (see [MCP Client Connection](#3-remote-ide--mcp-client-connection))
 
 > [!TIP]
 > If `http://localhost:4321` serves something unexpected, check for a local process already bound to the port with `lsof -nP -iTCP:4321 -sTCP:LISTEN` before starting the tunnel.
@@ -252,23 +252,25 @@ def test_completion_logic():
 
 ## 3. Remote IDE / MCP Client Connection
 
-To connect AI coding tools (such as **Cursor**, **VS Code**, or **Claude Desktop**) to the containerized proxy's Model Context Protocol (MCP) server, configure them to use the Server-Sent Events (SSE) channel on port `4321`.
+The proxy exposes a Model Context Protocol (MCP) server on the query port (`4321`) using the **Streamable HTTP** transport — the current MCP standard:
 
-### Cursor / VS Code Setup
-In your IDE settings, add a new MCP Server with the following configuration:
-*   **Type**: `sse`
-*   **URL**: `http://<YOUR_CONTAINER_IP_OR_DOMAIN>:4321/v1/mcp/sse`
-*   **Headers**:
-    *   `Authorization`: `Bearer orchid_live_your_generated_key_here`
+```
+http://localhost:4321/v1/mcp
+```
 
-### Claude Desktop Configuration
-Add the following configuration block to your `claude_desktop_config.json`:
+> [!IMPORTANT]
+> Two things trip up most setups:
+> 1. **Use the tunnel address.** For cloud deployments, port 4321 is (correctly) not exposed to the internet — connect through the SSH/IAP tunnel described above and use `localhost:4321`. Only use a raw container IP for local docker-compose setups on a trusted network.
+> 2. **The `Bearer ` prefix is required.** The header value is `Bearer orchid_live_…`, not the bare key.
+
+### Cursor
+Add to `~/.cursor/mcp.json` (global) or `<project>/.cursor/mcp.json` — not Cursor's `settings.json`:
 
 ```json
 {
   "mcpServers": {
     "orchid-proxy": {
-      "url": "http://<YOUR_CONTAINER_IP_OR_DOMAIN>:4321/v1/mcp/sse",
+      "url": "http://localhost:4321/v1/mcp",
       "headers": {
         "Authorization": "Bearer orchid_live_your_generated_key_here"
       }
@@ -276,3 +278,52 @@ Add the following configuration block to your `claude_desktop_config.json`:
   }
 }
 ```
+
+### VS Code (GitHub Copilot)
+Add to `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "orchid-proxy": {
+      "type": "http",
+      "url": "http://localhost:4321/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer orchid_live_your_generated_key_here"
+      }
+    }
+  }
+}
+```
+
+### Gemini CLI / Gemini Code Assist
+In your MCP configuration (`mcp_config.json` via "Manage MCPs", or `~/.gemini/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "orchid-proxy": {
+      "serverUrl": "http://localhost:4321/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer orchid_live_your_generated_key_here"
+      }
+    }
+  }
+}
+```
+
+### Claude Code (CLI)
+
+```bash
+claude mcp add --transport http orchid-proxy http://localhost:4321/v1/mcp \
+  --header "Authorization: Bearer orchid_live_your_generated_key_here"
+```
+
+> [!NOTE]
+> We deliberately do not recommend stdio-bridge wrappers (e.g. `npx mcp-remote`) that relay your API key through third-party code. The native HTTP configs above keep the credential path entirely between your client and your proxy.
+
+### Legacy SSE Transport
+Older MCP clients that only support the deprecated HTTP+SSE transport can use:
+*   **Type**: `sse`
+*   **URL**: `http://localhost:4321/v1/mcp/sse`
+*   **Headers**: `Authorization: Bearer orchid_live_your_generated_key_here`
