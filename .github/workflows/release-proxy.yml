@@ -9,6 +9,8 @@ name: Release Proxy Container
 
 on:
   workflow_dispatch: {}
+  repository_dispatch:
+    types: [proxy-updated]
   push:
     tags:
       - 'v*'
