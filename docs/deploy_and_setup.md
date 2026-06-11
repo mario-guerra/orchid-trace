@@ -15,9 +15,14 @@ The proxy runs inside a container exposing two ports:
 | :--- | :--- | :--- |
 | `ORCHID_API_KEY` | None | Global API Key for Zero-Trust access to query/control endpoints. |
 | `ORCHID_BIND_HOST` | `127.0.0.1` | Network interface to bind. Set to `0.0.0.0` in containers. |
-| `ORCHID_DB_PATH` | `~/.orchid/orchid.db` | Location of the SQLite database. |
+| `ORCHID_DB_PATH` | `~/.orchid/orchid.db` | Location of the SQLite database. Point this inside a mounted volume (e.g. `/data/orchid.db`) for persistence. |
 | `ORCHID_PROXY_PORT` | `4320` | Interceptor listening port. |
 | `ORCHID_QUERY_PORT` | `4321` | API / UI listening port. |
+| `ORCHID_RETENTION_DAYS` | `30` | Age limit: sessions whose newest exchange is older than this are pruned automatically. Set to `0` to disable. |
+| `ORCHID_MAX_DB_MB` | `1024` | Size cap: oldest sessions are pruned until the database fits under this limit (MB). Set to `0` to disable. |
+
+> [!NOTE]
+> **The database is self-limiting.** With the defaults above, the SQLite database holds at most ~30 days of sessions and stays under ~1 GB — whichever limit is hit first. The currently active session is never pruned. See [Data Retention](#3-data-retention-automatic-pruning) below for details.
 
 > [!IMPORTANT]
 > **Fail-Safe Security Rule**: If `ORCHID_BIND_HOST` is set to anything other than `127.0.0.1` (e.g. `0.0.0.0` inside a container) and `ORCHID_API_KEY` is not configured, the container will instantly fail to start.
@@ -36,9 +41,13 @@ docker run -d \
   -p 4321:4321 \
   -e ORCHID_BIND_HOST=0.0.0.0 \
   -e ORCHID_API_KEY="orchid_live_your_generated_key_here" \
+  -e ORCHID_DB_PATH=/data/orchid.db \
   -v ./data:/data \
   orchid-proxy:latest
 ```
+
+> [!WARNING]
+> Both halves are required for persistence: the `-v` mount makes `/data` live on the host, **and** `ORCHID_DB_PATH` must point inside it. If `ORCHID_DB_PATH` is omitted, the database defaults to `~/.orchid/orchid.db` *inside* the container's ephemeral filesystem and is lost when the container is removed — even if a volume is mounted.
 
 #### Option B: Ephemeral Testing (No host storage, auto-wiped on teardown)
 If you just want to run temporary tests and wipe all database records upon deletion:
@@ -107,9 +116,24 @@ SQLite database growth depends directly on your request/response size and your r
 *   **Average Exchange Size**: ~25 KB (including system prompts, completions, token usage metadata, and latencies).
 *   **10,000 Exchanges**: ~250 MB
 *   **100,000 Exchanges**: ~2.5 GB
-*   **Recommendation**: Allocate a persistent storage capacity of **10 GB to 50 GB**. 
+*   **Default cap**: With the default `ORCHID_MAX_DB_MB=1024`, the database never exceeds ~1 GB regardless of traffic — oldest sessions are pruned first (see [Data Retention](#3-data-retention-automatic-pruning)).
+*   **Recommendation**: Allocate persistent storage of at least **2× your `ORCHID_MAX_DB_MB` value** (default: a few GB is ample; raise the cap and the allocation together if you need longer history).
 
-#### 3. Persistent Volume Requirement (Ephemeral Storage Warning)
+#### 3. Data Retention (Automatic Pruning)
+The proxy enforces two retention limits in the background as exchanges are written. Whichever limit is hit first wins:
+
+| Limit | Variable | Default | Behavior when exceeded |
+| :--- | :--- | :--- | :--- |
+| **Age** | `ORCHID_RETENTION_DAYS` | `30` | Sessions whose newest exchange is older than the window are deleted. |
+| **Size** | `ORCHID_MAX_DB_MB` | `1024` | Oldest sessions are deleted one at a time until the database fits. |
+
+Key behaviors:
+*   Pruning operates on **whole sessions**, never individual exchanges — a retained session is always complete and replayable.
+*   The **currently active session is never pruned**, even if it exceeds the limits on its own.
+*   Set a variable to `0` to disable that limit. Setting both to `0` disables pruning entirely — only do this with monitoring on disk usage, since the database will then grow without bound.
+*   If the disk fills despite the caps (e.g. other processes consume it), recording fails gracefully: the proxy continues forwarding traffic to upstreams and logs storage errors — you lose new recordings, not availability.
+
+#### 4. Persistent Volume Requirement (Ephemeral Storage Warning)
 > [!CAUTION]
 > **Ephemeral Container Storage**: Standard serverless container hostings (Azure Container Apps, GCP Cloud Run, AWS Fargate) run on ephemeral filesystems. If the container crashes, restarts, or scales down to zero, **all data written to the container's internal storage is permanently lost**.
 >
