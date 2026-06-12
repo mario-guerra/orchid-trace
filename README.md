@@ -131,13 +131,13 @@ Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your cod
 
 | Path | Contents |
 | --- | --- |
-| `sdk/python/` | Python instrumentation SDK |
-| `sdk/typescript/` | TypeScript instrumentation SDK (Node 18+) |
-| `sdk/rust/` | Rust instrumentation SDK |
+| `sdk/python/` | Python instrumentation SDK ([PyPI](https://pypi.org/project/orchid-sdk/)) |
+| `sdk/typescript/` | TypeScript instrumentation SDK ([NPM](https://www.npmjs.com/package/orchid-sdk)) |
+| `sdk/rust/` | Rust instrumentation SDK ([Crates.io](https://crates.io/crates/orchid-sdk)) |
 | `docs/` | Deployment, setup, and integration guides |
 
 Additional language SDKs will be added under `sdk/` as they become available.
 
 ## License
 
-The SDKs are open source — see [sdk/python/LICENSE](sdk/python/LICENSE).
+Orchid and its SDKs are open source under the [Apache 2.0 License](LICENSE).
