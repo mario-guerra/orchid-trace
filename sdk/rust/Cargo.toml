@@ -1,10 +1,13 @@
 [package]
 name = "orchid-sdk"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Orchid Thin SDK for environment routing, transport patching, and proxy control"
 authors = ["Orchid Team <team@orchid.dev>"]
 license = "Apache-2.0"
+repository = "https://github.com/mario-guerra/orchid"
+keywords = ["llm", "proxy", "debugging", "observability"]
+categories = ["development-tools::debugging", "api-bindings"]
 
 [dependencies]
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
