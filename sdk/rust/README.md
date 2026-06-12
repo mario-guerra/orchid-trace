@@ -1,6 +1,6 @@
 # Orchid Rust SDK (`orchid-sdk`)
 
-**[Visit the public website: orchid.dev](https://orchidtrace.xyz)**
+**[Visit the public website: orchidtrace.xyz](https://orchidtrace.xyz)**
 
 The `orchid-sdk` provides a low-friction, idiomatic integration for routing outbound LLM requests through the [Orchid](https://orchid.dev) proxy. It uses the `reqwest-middleware` pattern to intercept, rewrite, and securely decorate HTTP requests with Orchid's control headers, eliminating the need for unsafe monkey-patching or complex network overrides.
 
