@@ -47,7 +47,7 @@ Unlike traditional LLM observability tools that require wrapping every client in
 
 ### Header-Driven State Machine
 
-The proxy is stateless about your application. It reads `X-Orchid-*` HTTP headers (injected by the SDK, or set manually from any language) to decide how to process each request:
+The proxy does not keep track of application state. It reads `X-Orchid-*` HTTP headers (injected by the SDK, or set manually from any language) to decide how to process each request:
 
 *   **`passthrough`**: Transparent reverse proxy. Forwards the request and returns the response without writing anything to disk.
 *   **`capture`**: Forwards the request, serializes the complete request/response payloads (including streaming chunks), calculates costs, and saves them to a local SQLite database under a specific `Session ID`.
