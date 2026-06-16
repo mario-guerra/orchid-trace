@@ -117,13 +117,13 @@ docker run -d \
 
 ### 3. Point your app at the proxy
 
-Use the SDKs in this repository ([sdk/python/](sdk/python/), [sdk/typescript/](sdk/typescript/), [sdk/rust/](sdk/rust/)) or simply set your client's base URL to the proxy — for your LLM provider, and for any other APIs you want recorded. Route everything through the proxy if you want full-fidelity replay. See [docs/deploy_and_setup.md](docs/deploy_and_setup.md) for full instructions, including cloud deployment templates (AWS / GCP / Azure).
+Use the SDKs in this repository ([sdk/python/](sdk/python/), [sdk/typescript/](sdk/typescript/)) or simply set your client's base URL to the proxy — for your LLM provider, and for any other APIs you want recorded. Route everything through the proxy if you want full-fidelity replay. See [docs/getting_started.md](docs/getting_started.md) for full instructions, including cloud deployment templates (AWS / GCP / Azure).
 
-Using Go, Java, Ruby, or anything else? No SDK needed — the proxy is header-driven, so any HTTP client works. See [docs/any_language_integration.md](docs/any_language_integration.md).
+Using Go, Java, Ruby, or anything else? No SDK needed — the proxy is header-driven, so any HTTP client works. See the header specifications in [docs/configuration.md](docs/configuration.md) and [docs/api_reference.md](docs/api_reference.md).
 
 ### 4. Connect your AI assistant (MCP)
 
-Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your coding agent gets direct visibility into your app's recorded LLM traffic — even when those calls happen deep inside frameworks or services it could never see otherwise. Setup instructions are in [docs/deploy_and_setup.md](docs/deploy_and_setup.md).
+Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your coding agent gets direct visibility into your app's recorded LLM traffic — even when those calls happen deep inside frameworks or services it could never see otherwise. Setup instructions are in [docs/features/mcp_server.md](docs/features/mcp_server.md).
 
 ---
 
@@ -133,7 +133,6 @@ Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your cod
 | --- | --- |
 | `sdk/python/` | Python instrumentation SDK ([PyPI](https://pypi.org/project/orchid-sdk/)) |
 | `sdk/typescript/` | TypeScript instrumentation SDK ([NPM](https://www.npmjs.com/package/orchid-sdk)) |
-| `sdk/rust/` | Rust instrumentation SDK ([Crates.io](https://crates.io/crates/orchid-sdk)) |
 | `docs/` | Deployment, setup, and integration guides |
 
 Additional language SDKs will be added under `sdk/` as they become available.
@@ -141,3 +140,4 @@ Additional language SDKs will be added under `sdk/` as they become available.
 ## License
 
 Orchid and its SDKs are open source under the [Apache 2.0 License](LICENSE).
+
