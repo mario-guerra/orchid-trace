@@ -30,7 +30,7 @@ This repository contains the open-source Orchid SDKs and user documentation. The
 ```mermaid
 flowchart LR
     subgraph env["Your Environment (laptop, on-prem, or your own cloud)"]
-        app["Application<br/>(Python, TS, Rust, ...)"]
+        app["Application<br/>(Python, TS, ...)"]
         proxy["orchid-proxy<br/>:4320 (proxy)<br/>:4321 (query / UI / MCP)"]
         db[("orchid.db<br/>(SQLite)")]
         app -- "HTTP" --> proxy
@@ -43,7 +43,7 @@ flowchart LR
 
 ### Non-Intrusive Interception (Thin SDK)
 
-Unlike traditional LLM observability tools that require wrapping every client initialization or using heavy SDKs with AST modifications, Orchid uses an **APM-style Thin SDK**. The SDK patches the foundational HTTP transport layer (`httpx`/`requests` in Python, `fetch` in Node, `reqwest` middleware in Rust), so every LLM call made by standard client libraries is automatically routed through the local or remote Orchid Proxy — without changing your prompt-handling or generation code.
+Unlike traditional LLM observability tools that require wrapping every client initialization or using heavy SDKs with AST modifications, Orchid uses an **APM-style Thin SDK**. The SDK patches the foundational HTTP transport layer (`httpx`/`requests` in Python, `fetch` in Node), so every LLM call made by standard client libraries is automatically routed through the local or remote Orchid Proxy — without changing your prompt-handling or generation code.
 
 ### Header-Driven State Machine
 
