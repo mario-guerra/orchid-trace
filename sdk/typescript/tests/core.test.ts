@@ -12,7 +12,7 @@ import { session } from "../src/context.js";
 
 const ENV_KEYS = [
   "ORCHID_PROXY_URL",
-  "ORCHID_PROXY_KEY",
+  "ORCHID_API_KEY",
   "ORCHID_QUERY_URL",
   "ORCHID_SESSION_ID",
   "ORCHID_MODE",
@@ -98,8 +98,8 @@ describe("rewriteUrl", () => {
 });
 
 describe("injectHeaders", () => {
-  it("injects proxy key, session, mode, and target URL for proxy-bound requests", () => {
-    process.env.ORCHID_PROXY_KEY = "secret-key";
+  it("injects API key, session, mode, and target URL for proxy-bound requests", () => {
+    process.env.ORCHID_API_KEY = "secret-key";
     const headers = new Headers();
     session("sess-1", "capture", () => {
       injectHeaders(
@@ -108,7 +108,7 @@ describe("injectHeaders", () => {
         new URL("https://api.openai.com/v1/chat/completions"),
       );
     });
-    expect(headers.get("X-Orchid-Proxy-Key")).toBe("secret-key");
+    expect(headers.get("X-Orchid-Api-Key")).toBe("secret-key");
     expect(headers.get("X-Orchid-Session-Id")).toBe("sess-1");
     expect(headers.get("X-Orchid-Mode")).toBe("capture");
     expect(headers.get("X-Orchid-Target-Url")).toBe("https://api.openai.com");
@@ -134,12 +134,12 @@ describe("injectHeaders", () => {
 describe("purgeOrchidHeaders", () => {
   it("removes all x-orchid-* headers case-insensitively", () => {
     const headers = new Headers({
-      "X-Orchid-Proxy-Key": "k",
+      "X-Orchid-Api-Key": "k",
       "x-orchid-session-id": "s",
       Authorization: "Bearer real-key",
     });
     purgeOrchidHeaders(headers);
-    expect(headers.get("x-orchid-proxy-key")).toBeNull();
+    expect(headers.get("x-orchid-api-key")).toBeNull();
     expect(headers.get("x-orchid-session-id")).toBeNull();
     expect(headers.get("Authorization")).toBe("Bearer real-key");
   });

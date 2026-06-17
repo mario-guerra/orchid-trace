@@ -126,8 +126,7 @@ Configure the SDK using the following environment variables:
 |---|---|---|
 | `ORCHID_PROXY_URL` | `http://127.0.0.1:4320/v1` | Base URL of the Orchid interceptor proxy. |
 | `ORCHID_QUERY_URL` | `http://127.0.0.1:4321` | Base URL of the Orchid Query and Control service. |
-| `ORCHID_PROXY_KEY` | None | Security key required by the Orchid Proxy (injected as `X-Orchid-Proxy-Key`). |
-| `ORCHID_API_KEY` | None | API key required to authenticate Orchid Control Client requests. |
+| `ORCHID_API_KEY` | None | API key required to authenticate to the Orchid Proxy and Control Client (injected as `X-Orchid-Api-Key`). |
 | `ORCHID_RECORD` | `0` | Set to `1`, `true`, or `yes` to run `@replay` decorators in capture/record mode. |
 | `ORCHID_CAPTURE_DOMAINS` | None | Comma-separated list of domains to proxy. Use `*` to capture all outgoing HTTP requests. |
 | `ORCHID_IGNORE_DOMAINS` | None | Comma-separated list of domains to explicitly bypass (ignored during capture). |

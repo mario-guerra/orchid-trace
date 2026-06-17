@@ -19,8 +19,7 @@ Configure Orchid using environment variables or command-line flags to customize 
 
 | Variable / Flag | Description | Allowed Values | Default | Required / Optional |
 | :--- | :--- | :--- | :--- | :--- |
-| `ORCHID_API_KEY` | Global API key required to authenticate Orchid Control Client and Query API requests. | String | None | Optional (Required if binding to non-localhost) |
-| `ORCHID_PROXY_KEY` | Security key required by the Orchid Proxy (injected as `X-Orchid-Proxy-Key`). | String | None | Optional |
+| `ORCHID_API_KEY` | Global API key required to authenticate to the Orchid Proxy and Control Client (injected as `X-Orchid-Api-Key`). | String | None | Optional (Required if binding to non-localhost) |
 
 > [!IMPORTANT]
 > **API Key in Docker**: The docker image binds to `0.0.0.0` by default. As a result, you must supply `ORCHID_API_KEY` on container startup. Leaving it empty causes a crash-exit (`CRITICAL SECURITY: Cannot bind to 0.0.0.0 without ORCHID_API_KEY set`).
@@ -43,4 +42,3 @@ Configure Orchid using environment variables or command-line flags to customize 
 | `GOOGLE_CLOUD_DISABLE_GRPC` | discovered | Not set | Discovered in source or CI configuration. |
 | `OPENAI_API_KEY` | discovered | Not set | Discovered in source or CI configuration. |
 | `OPENAI_BASE_URL` | discovered | Not set | Discovered in source or CI configuration. |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | discovered | Not set | Discovered in source or CI configuration. |

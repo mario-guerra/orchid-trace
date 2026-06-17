@@ -15,7 +15,7 @@ def test_purge_orchid_headers_dict():
     headers = {
         "X-Orchid-Session-Id": "sess-123",
         "x-orchid-mode": "capture",
-        "X-ORCHID-PROXY-KEY": "proxy-secret",
+        "X-Orchid-Api-Key": "proxy-secret",
         "Content-Type": "application/json",
         "Authorization": "Bearer token"
     }
@@ -29,7 +29,7 @@ def test_purge_orchid_headers_list():
     headers = [
         ("X-Orchid-Session-Id", "sess-123"),
         ["x-orchid-mode", "capture"],
-        ("X-ORCHID-PROXY-KEY", "proxy-secret"),
+        ("X-Orchid-Api-Key", "proxy-secret"),
         ("Content-Type", "application/json")
     ]
     _purge_orchid_headers(headers)

@@ -78,8 +78,8 @@ export function injectHeaders(
   const proxy = new URL(proxyUrl());
   if (targetUrl.host !== proxy.host) return;
 
-  const proxyKey = process.env.ORCHID_PROXY_KEY;
-  if (proxyKey) headers.set("X-Orchid-Proxy-Key", proxyKey);
+  const apiKey = process.env.ORCHID_API_KEY;
+  if (apiKey) headers.set("X-Orchid-Api-Key", apiKey);
 
   const sessionId = currentSessionId();
   let mode = currentMode();

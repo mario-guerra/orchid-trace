@@ -81,9 +81,9 @@ def _inject_headers(headers, url_str, original_url_str=None):
     
     # Check if target host and port match the proxy URL
     if req_parsed.netloc == proxy_parsed.netloc:
-        proxy_key = os.environ.get("ORCHID_PROXY_KEY")
-        if proxy_key:
-            headers["X-Orchid-Proxy-Key"] = proxy_key
+        api_key = os.environ.get("ORCHID_API_KEY")
+        if api_key:
+            headers["X-Orchid-Api-Key"] = api_key
             
         session_id = orchid_session_id.get() or os.environ.get("ORCHID_SESSION_ID")
         mode = orchid_mode.get() or os.environ.get("ORCHID_MODE")
@@ -208,9 +208,9 @@ try:
             req_parsed = urllib.parse.urlparse(str(url))
             
             if req_parsed.netloc == proxy_parsed.netloc:
-                proxy_key = os.environ.get("ORCHID_PROXY_KEY")
-                if proxy_key:
-                    headers.append(("X-Orchid-Proxy-Key", proxy_key))
+                api_key = os.environ.get("ORCHID_API_KEY")
+                if api_key:
+                    headers.append(("X-Orchid-Api-Key", api_key))
                 session_id = orchid_session_id.get() or os.environ.get("ORCHID_SESSION_ID")
                 mode = orchid_mode.get() or os.environ.get("ORCHID_MODE")
                 if session_id:

@@ -55,7 +55,7 @@ impl Default for OrchidMiddleware {
         let proxy_url_str = std::env::var("ORCHID_PROXY_URL")
             .unwrap_or_else(|_| "http://127.0.0.1:4320/v1".to_string());
         let proxy_url = Url::parse(&proxy_url_str).expect("Invalid ORCHID_PROXY_URL");
-        let proxy_key = std::env::var("ORCHID_PROXY_KEY").ok();
+        let proxy_key = std::env::var("ORCHID_API_KEY").ok();
         Self { proxy_url, proxy_key }
     }
 }
@@ -157,7 +157,7 @@ impl Middleware for OrchidMiddleware {
         }
         if let Some(ref key) = self.proxy_key {
             if let Ok(hv) = HeaderValue::from_str(key) {
-                req.headers_mut().insert("X-Orchid-Proxy-Key", hv);
+                req.headers_mut().insert("X-Orchid-Api-Key", hv);
             }
         }
 

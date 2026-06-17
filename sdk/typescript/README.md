@@ -119,8 +119,7 @@ if (await controlClient.checkHealth()) {
 | :--- | :--- | :--- |
 | `ORCHID_PROXY_URL` | `http://127.0.0.1:4320/v1` | The Orchid Proxy intercept endpoint. |
 | `ORCHID_QUERY_URL` | derived (`:4321`) | The Query & Control API endpoint. |
-| `ORCHID_PROXY_KEY` | — | Auth key sent as `X-Orchid-Proxy-Key`. |
-| `ORCHID_API_KEY` | — | Control plane API key (`X-Orchid-Api-Key`). |
+| `ORCHID_API_KEY` | — | API key sent as `X-Orchid-Api-Key`. |
 | `ORCHID_SESSION_ID` / `ORCHID_MODE` | — | Global session/mode fallback when no `session()` scope is active. |
 | `ORCHID_CAPTURE_DOMAINS` | — | Comma-separated extra domains to intercept, or `*` for all. |
 | `ORCHID_IGNORE_DOMAINS` | — | Comma-separated domains to never intercept. |

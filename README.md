@@ -127,7 +127,7 @@ docker run -d \
   ghcr.io/mario-guerra/orchid-proxy:latest
 ```
 
-*   **Recording Proxy**: `http://localhost:4320/v1` (pass `X-Orchid-Proxy-Key: your-secure-api-key` — the `Authorization` header is forwarded untouched to the upstream provider). Works for LLM endpoints and any other HTTP API you route through it.
+*   **Recording Proxy**: `http://localhost:4320/v1` (pass `X-Orchid-Api-Key: your-secure-api-key` — the `Authorization` header is forwarded untouched to the upstream provider). Works for LLM endpoints and any other HTTP API you route through it.
 *   **Query API / Visualizer UI**: `http://localhost:4321`
 
 ### 3. Point your app at the proxy
@@ -149,7 +149,7 @@ Install the lightweight SDK and call the initialization helper at the very begin
   ```
 
 #### Option B: Native Base URL Routing (No SDK / Other Languages)
-If you prefer not to use the SDK (or are using Go, Java, or Ruby), you can configure your LLM client directly. Set the API base URL to the proxy address (`http://localhost:4320/v1`) and pass your generated API key using the `X-Orchid-Proxy-Key` header:
+If you prefer not to use the SDK (or are using Go, Java, or Ruby), you can configure your LLM client directly. Set the API base URL to the proxy address (`http://localhost:4320/v1`) and pass your generated API key using the `X-Orchid-Api-Key` header:
 
 * **Python example (OpenAI Client)**:
   ```python
@@ -157,7 +157,7 @@ If you prefer not to use the SDK (or are using Go, Java, or Ruby), you can confi
   
   client = OpenAI(
       base_url="http://localhost:4320/v1",
-      default_headers={"X-Orchid-Proxy-Key": "your-secure-api-key"}
+      default_headers={"X-Orchid-Api-Key": "your-secure-api-key"}
   )
   ```
 
@@ -168,7 +168,34 @@ For more configuration options and advanced setups (including cloud deployment t
 
 Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your coding agent gets direct visibility into your app's recorded LLM traffic — even when those calls happen deep inside frameworks or services it could never see otherwise. Setup instructions are in [docs/features/mcp_server.md](docs/features/mcp_server.md).
 
-## Configuring Model Pricing
+### 5. Specify a recording session
+
+By default, the proxy groups recorded request/response exchanges under `"default-session"`. You can organize your traces (e.g., by test run, feature sprint, or user ID) by explicitly specifying a session.
+
+The proxy resolves the active session ID using the following precedence (from highest to lowest):
+
+1. **Global Active Override**: Set dynamically via MCP (e.g., calling the `set_active_session` tool) or via the Control Plane API (`POST /sessions/active`). When set, this overrides all incoming session configurations.
+2. **Programmatic SDK Scope**: Define a context block in your client application code to scope specific calls:
+   * **Python**:
+     ```python
+     with orchid.session("my-feature-test", mode="capture"):
+         # Intercepted LLM requests here are grouped under "my-feature-test"
+         agent.run()
+     ```
+   * **TypeScript**:
+     ```typescript
+     import { session } from "orchid-sdk";
+
+     await session("my-feature-test", "capture", async () => {
+         // Intercepted LLM requests here are grouped under "my-feature-test"
+         await agent.run();
+     });
+     ```
+3. **HTTP Header (`X-Orchid-Session-Id`)**: Pass the session ID directly as an HTTP header on outbound requests. This is the primary method for custom integrations or unsupported SDK languages.
+4. **Client Environment Variable (`ORCHID_SESSION_ID`)**: Set the variable in the environment where your application runs. The SDK will automatically read this and attach the header to all outbound calls.
+5. **Proxy Environment Variable / CLI Config (`ORCHID_SESSION_ID`)**: Define the variable when starting the proxy process or Docker container. This serves as the default fallback for all incoming traffic.
+
+### 6. Configure model pricing
 
 To track LLM costs, you can load your model pricing definitions into the Orchid Proxy. By default, untracked models default to a cost of `$0.00`. Costs are defined in **USD per 1,000,000 tokens**.
 
@@ -177,7 +204,7 @@ Here is an example payload configured with up-to-date pricing for models used in
 - **`o3-mini`**: Input: $1.10, Output: $4.40
 - **`claude-3.5-sonnet` / `claude-sonnet-4-6`**: Input: $3.00, Output: $15.00
 
-### Method A: REST API (Push)
+#### Method A: REST API (Push)
 
 Send a `POST` request to the `/v1/pricing` endpoint on the query port (default `4321`):
 
@@ -211,7 +238,7 @@ curl -X POST http://localhost:4321/v1/pricing \
   }'
 ```
 
-### Method B: MCP Tool (`update_pricing`)
+#### Method B: MCP Tool (`update_pricing`)
 
 If your assistant is connected via MCP, it can configure model pricing by invoking the `update_pricing` tool. The tool expects a stringified JSON schema as the `pricing_json` parameter:
 
@@ -225,6 +252,15 @@ If your assistant is connected via MCP, it can configure model pricing by invoki
 ```
 
 After updating pricing, you can backfill cost metrics on previously recorded sessions by sending a POST request to `/v1/pricing/recompute` (or calling the `recompute_pricing` MCP tool).
+
+### 7. Next steps
+
+Once you have pointed your application to the proxy and configured model pricing, you are ready to start inspecting traces:
+
+1. **Record traffic**: Run your application (or its test suite). The proxy will intercept and save all upstream LLM calls.
+2. **Open the visualizer**: Navigate to `http://localhost:4321` in your browser. Enter your configured `ORCHID_API_KEY` when prompted to authorize and access the session dashboard.
+3. **Analyze and debug**: Inspect your traces in real-time, view detailed token cost breakdowns, or replay execution paths.
+4. **Explore further**: Check out the guides on [session recording](docs/features/session_recording.md) and [replay testing](docs/features/replay_testing.md) to build automated regressions.
 
 ---
 

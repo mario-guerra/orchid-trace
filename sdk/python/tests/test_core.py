@@ -63,7 +63,7 @@ def test_httpx_patching(monkeypatch):
         pytest.skip("httpx not installed")
         
     monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
-    monkeypatch.setenv("ORCHID_PROXY_KEY", "proxy-secret")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
     init()
     
     captured_headers = {}
@@ -79,13 +79,13 @@ def test_httpx_patching(monkeypatch):
     
     # 1. External URL: should NOT inject headers
     client.send(httpx.Request("GET", "http://example.com"))
-    assert "x-orchid-proxy-key" not in captured_headers
+    assert "x-orchid-api-key" not in captured_headers
     assert "x-orchid-session-id" not in captured_headers
     assert "x-orchid-mode" not in captured_headers
     
     # 2. Proxy URL: should inject proxy key
     client.send(httpx.Request("GET", "http://127.0.0.1:4320/v1/chat/completions"))
-    assert captured_headers.get("x-orchid-proxy-key") == "proxy-secret"
+    assert captured_headers.get("x-orchid-api-key") == "proxy-secret"
     assert "x-orchid-session-id" not in captured_headers
     assert "x-orchid-mode" not in captured_headers
     
@@ -95,7 +95,7 @@ def test_httpx_patching(monkeypatch):
     with session("sess-123", mode="capture"):
         client.send(httpx.Request("GET", "http://127.0.0.1:4320/v1/chat/completions"))
         
-    assert captured_headers.get("x-orchid-proxy-key") == "proxy-secret"
+    assert captured_headers.get("x-orchid-api-key") == "proxy-secret"
     assert captured_headers.get("x-orchid-session-id") == "sess-123"
     assert captured_headers.get("x-orchid-mode") == "capture"
 
@@ -106,7 +106,7 @@ def test_requests_patching(monkeypatch):
         pytest.skip("requests not installed")
         
     monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
-    monkeypatch.setenv("ORCHID_PROXY_KEY", "proxy-secret")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
     init()
     
     captured_kwargs = {}
@@ -125,14 +125,14 @@ def test_requests_patching(monkeypatch):
     # 1. External URL: should NOT inject headers
     session_obj.request("GET", "http://example.com")
     headers = captured_kwargs.get("headers", {})
-    assert "X-Orchid-Proxy-Key" not in headers
+    assert "X-Orchid-Api-Key" not in headers
     assert "X-Orchid-Session-Id" not in headers
     assert "X-Orchid-Mode" not in headers
     
     # 2. Proxy URL: should inject proxy key
     session_obj.request("GET", "http://127.0.0.1:4320/v1/chat/completions")
     headers = captured_kwargs.get("headers", {})
-    assert headers.get("X-Orchid-Proxy-Key") == "proxy-secret"
+    assert headers.get("X-Orchid-Api-Key") == "proxy-secret"
     assert "X-Orchid-Session-Id" not in headers
     assert "X-Orchid-Mode" not in headers
     
@@ -143,7 +143,7 @@ def test_requests_patching(monkeypatch):
         session_obj.request("GET", "http://127.0.0.1:4320/v1/chat/completions")
         
     headers = captured_kwargs.get("headers", {})
-    assert headers.get("X-Orchid-Proxy-Key") == "proxy-secret"
+    assert headers.get("X-Orchid-Api-Key") == "proxy-secret"
     assert headers.get("X-Orchid-Session-Id") == "sess-456"
     assert headers.get("X-Orchid-Mode") == "log"
 
@@ -155,7 +155,7 @@ async def test_aiohttp_patching(monkeypatch):
         pytest.skip("aiohttp not installed")
         
     monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
-    monkeypatch.setenv("ORCHID_PROXY_KEY", "proxy-secret")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
     init()
     
     captured_headers = {}
@@ -173,11 +173,11 @@ async def test_aiohttp_patching(monkeypatch):
     async with aiohttp.ClientSession() as session_obj:
         # 1. External URL: should NOT inject headers
         await session_obj.get("http://example.com")
-        assert "X-Orchid-Proxy-Key" not in captured_headers
+        assert "X-Orchid-Api-Key" not in captured_headers
         
         # 2. Proxy URL: should inject proxy key
         await session_obj.get("http://127.0.0.1:4320/v1/chat/completions")
-        assert captured_headers.get("X-Orchid-Proxy-Key") == "proxy-secret"
+        assert captured_headers.get("X-Orchid-Api-Key") == "proxy-secret"
 
 @pytest.mark.asyncio
 async def test_async_contextvar_isolation(monkeypatch):
