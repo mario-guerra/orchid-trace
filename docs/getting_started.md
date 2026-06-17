@@ -46,7 +46,7 @@ docker run -d \
 > [!IMPORTANT]
 > **API Key is Mandatory in Docker**: The Orchid Proxy container binds to `0.0.0.0` (`ORCHID_BIND_HOST=0.0.0.0`) by default to receive external bridge network traffic. Because of this, setting `ORCHID_API_KEY` is **mandatory** when running the Docker image. If you start the container without a key, the proxy will crash-exit immediately on startup.
 >
-> **Exempt Public Routes**: The health check endpoint (`/health`) and the static visualizer web assets (HTML, JS, CSS) on the query port (`4321`) are exempt from authentication. However, all actual proxy traffic (port `4320`) and data API endpoints (port `4321` under `/v1/*` and `/api/*`) are strictly auth-gated and require the key.
+> **Exempt Public Routes**: The health check endpoint (`/health`) and the static visualizer web assets (HTML, JS, CSS) on the query port (`4321`) are exempt from authentication. This allows the visualizer UI to load in your browser, but it requires the key to load any session data (the screen will prompt you to enter the key). However, all actual proxy traffic (port `4320`) and data API endpoints (port `4321` under `/v1/*` and `/api/*`) are strictly auth-gated and require the key.
 
 ### Step 2: Install the Orchid SDK
 

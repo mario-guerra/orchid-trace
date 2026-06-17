@@ -25,7 +25,7 @@ Configure Orchid using environment variables or command-line flags to customize 
 > [!IMPORTANT]
 > **API Key in Docker**: The docker image binds to `0.0.0.0` by default. As a result, you must supply `ORCHID_API_KEY` on container startup. Leaving it empty causes a crash-exit (`CRITICAL SECURITY: Cannot bind to 0.0.0.0 without ORCHID_API_KEY set`).
 >
-> **Exempt Endpoints**: The health check endpoint (`/health`) and the static visualizer assets are open/unauthenticated. All other paths (the proxy port and the data query endpoints) are auth-gated.
+> **Exempt Endpoints**: The health check endpoint (`/health`) and the static visualizer assets are open/unauthenticated. This allows the visualizer UI to load in your browser, but it requires the key to query session data (the screen will prompt you for your key). All other paths (the proxy port and the data query endpoints) are auth-gated.
 
 
 ## Storage and Retention Settings

@@ -19,6 +19,10 @@ Use this pattern when running the Orchid Proxy container and the IDE/MCP client 
 Add the Orchid configuration to your local client config file:
 * **Claude Desktop**: `~/Library/Application Support/Claude/mcp_config.json`
 * **Cursor**: In Cursor Settings -> Features -> MCP -> Add New Tool (choose `command` type).
+* **Google Antigravity IDE**: `~/.gemini/antigravity-ide/mcp_config.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-ide\mcp_config.json` (Windows).
+* **Claude Code**: Run the command `claude mcp add orchid-local docker -- run -i --rm -v orchid-data:/data ghcr.io/mario-guerra/orchid-proxy:latest --mcp` (or add to `~/.config/claude/mcp.json`).
+
+
 
 ```json
 {

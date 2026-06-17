@@ -61,7 +61,7 @@ The proxy does not keep track of application state. It reads `X-Orchid-*` HTTP h
 Every captured LLM call (or "Exchange") records:
 *   **Request Metadata**: System prompts, user prompts, temperature, top-p, and custom tags.
 *   **Response Telemetry**: Complete completion text, usage tokens (input/output), and latency.
-*   **Cost Calculation**: Real-time USD cost attribution based on up-to-date model pricing maps.
+*   **Cost Calculation**: Real-time USD cost attribution based on user-supplied model pricing maps (see [docs/configuration.md](docs/configuration.md) and the `/pricing` endpoint in [docs/api_reference.md](docs/api_reference.md)).
 *   **Stream Reassembly**: For streaming completions, Orchid buffers SSE chunks in memory, serving them to the client instantly, and writes the fully reassembled completion body to SQLite.
 
 ### Deterministic Mock Replays
@@ -113,7 +113,7 @@ Start the container and pass your generated key as the `ORCHID_API_KEY` environm
 > [!IMPORTANT]
 > **API Key is Mandatory in Docker**: The Orchid Proxy container binds to `0.0.0.0` (`ORCHID_BIND_HOST=0.0.0.0`) by default so that it can receive network traffic. Because it binds to a non-localhost address, setting `ORCHID_API_KEY` is **mandatory** when running inside Docker. If you attempt to start the container without setting `ORCHID_API_KEY`, the proxy will crash-exit on startup for security reasons.
 >
-> **Exempt Public Routes**: The health check endpoint (`/health`) and the static visualizer web assets (HTML, JS, CSS) on the query port (`4321`) do not require the key, allowing you to load the visualizer login screen. All proxying traffic on port `4320` and data API endpoints (under `/v1/*` and `/api/*` on port `4321`) are strictly auth-gated and require the key.
+> **Exempt Public Routes**: The health check endpoint (`/health`) and the static visualizer web assets (HTML, JS, CSS) on the query port (`4321`) do not require the key. This allows the visualizer UI to load in your browser, but it requires the key to load any session data (the screen will prompt you to enter the key). All proxying traffic on port `4320` and data API endpoints (under `/v1/*` and `/api/*` on port `4321`) are strictly auth-gated and require the key.
 
 
 ```bash
@@ -132,9 +132,37 @@ docker run -d \
 
 ### 3. Point your app at the proxy
 
-Use the SDKs in this repository ([sdk/python/](sdk/python/), [sdk/typescript/](sdk/typescript/)) or simply set your client's base URL to the proxy — for your LLM provider, and for any other APIs you want recorded. Route everything through the proxy if you want full-fidelity replay. See [docs/getting_started.md](docs/getting_started.md) for full instructions, including cloud deployment templates (AWS / GCP / Azure).
+To intercept and record requests, you must configure your application to route its outbound HTTP traffic through the local proxy. You can do this in two ways:
 
-Using Go, Java, Ruby, or anything else? No SDK needed — the proxy is header-driven, so any HTTP client works. See the header specifications in [docs/configuration.md](docs/configuration.md) and [docs/api_reference.md](docs/api_reference.md).
+#### Option A: Use the Thin SDK (Recommended)
+Install the lightweight SDK and call the initialization helper at the very beginning of your application lifecycle. This automatically patches the global HTTP/HTTPS transport clients.
+
+* **Python**: `pip install orchid-sdk`
+  ```python
+  import orchid
+  orchid.init() # Must be called before initializing any LLM client
+  ```
+* **TypeScript/Node**: `npm install orchid-sdk`
+  ```typescript
+  import { init } from "orchid-sdk";
+  await init(); // Must be called before initializing any LLM client
+  ```
+
+#### Option B: Native Base URL Routing (No SDK / Other Languages)
+If you prefer not to use the SDK (or are using Go, Java, or Ruby), you can configure your LLM client directly. Set the API base URL to the proxy address (`http://localhost:4320/v1`) and pass your generated API key using the `X-Orchid-Proxy-Key` header:
+
+* **Python example (OpenAI Client)**:
+  ```python
+  from openai import OpenAI
+  
+  client = OpenAI(
+      base_url="http://localhost:4320/v1",
+      default_headers={"X-Orchid-Proxy-Key": "your-secure-api-key"}
+  )
+  ```
+
+For more configuration options and advanced setups (including cloud deployment templates), see [docs/getting_started.md](docs/getting_started.md) and [docs/configuration.md](docs/configuration.md).
+
 
 ### 4. Connect your AI assistant (MCP)
 
