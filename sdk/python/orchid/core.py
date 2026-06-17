@@ -44,7 +44,7 @@ def _should_intercept(url_parsed):
 
 
 def _is_core_provider(host):
-    return any(h in host for h in ["api.openai.com", "api.anthropic.com", "generativelanguage.googleapis.com", "-aiplatform.googleapis.com"])
+    return any(h in host for h in ["api.openai.com", "api.anthropic.com", "generativelanguage.googleapis.com", "aiplatform.googleapis.com"])
 
 
 def _rewrite_url(original_url_str, proxy_url):
@@ -421,6 +421,9 @@ def init():
 
     if not _offline_fallback:
         os.environ["OPENAI_BASE_URL"] = proxy_url
+    else:
+        import sys
+        print(f"⚠️  [orchid-sdk] Orchid Proxy is offline (health check failed at {query_url}). Falling back to direct routing. No traffic will be recorded.", file=sys.stderr)
         
     # Disable gRPC globally for Google Cloud APIs to force fallback to REST stubs
     os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] = "True"
