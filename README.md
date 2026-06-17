@@ -165,7 +165,30 @@ For more configuration options and advanced setups (including cloud deployment t
 
 ### 4. Connect your AI assistant (MCP)
 
-Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your coding agent gets direct visibility into your app's recorded LLM traffic — even when those calls happen deep inside frameworks or services it could never see otherwise. Setup instructions are in [docs/features/mcp_server.md](docs/features/mcp_server.md).
+Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your coding agent gets direct visibility into your app's recorded LLM traffic. 
+
+Add the configuration below to your IDE's `mcp_config.json` (e.g., `~/.gemini/antigravity-ide/mcp_config.json` or `~/Library/Application Support/Claude/mcp_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "orchid-local": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "orchid-proxy",
+        "orchid-proxy",
+        "--mcp"
+      ]
+    }
+  }
+}
+```
+
+This runs the MCP server process directly inside the running `orchid-proxy` container, sharing its database state without spinning up a separate container instance.
+
+For other configuration options (like launching a standalone dedicated container or setting up a remote cloud tunnel), see the detailed [MCP Server Guide](docs/features/mcp_server.md).
 
 ### 5. Specify a recording session
 

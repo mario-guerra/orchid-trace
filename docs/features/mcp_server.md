@@ -20,13 +20,38 @@ Add the Orchid configuration to your local client config file:
 * **Claude Desktop**: `~/Library/Application Support/Claude/mcp_config.json`
 * **Cursor**: In Cursor Settings -> Features -> MCP -> Add New Tool (choose `command` type).
 * **Google Antigravity IDE**: `~/.gemini/antigravity-ide/mcp_config.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-ide\mcp_config.json` (Windows).
-* **Claude Code**: Run the command `claude mcp add orchid-local docker -- run -i --rm -v orchid-data:/data ghcr.io/mario-guerra/orchid-proxy:latest --mcp --bind-host 127.0.0.1` (or add to `~/.config/claude/mcp.json`).
-> [!NOTE]
-> **Authentication in Stdio Mode**: Because the Docker image binds to `0.0.0.0` by default, launching the container requires a configured `ORCHID_API_KEY` by default. 
-> 
-> * **Option A (No Key setup)**: If you are running the container locally *only* for stdio MCP, you can bypass key validation by passing `--bind-host 127.0.0.1` at the end of the container arguments (included in the examples below). Since communication occurs over stdin/stdout, there is no network exposure.
-> * **Option B (Using a Key)**: If you run a persistent proxy server or want to enforce key check, omit `--bind-host 127.0.0.1` and pass `-e ORCHID_API_KEY=your_key_here` in the Docker args list.
+* **Claude Code**:
+  * *Recommended (Exec)*: `claude mcp add orchid-local docker -- exec -i orchid-proxy orchid-proxy --mcp`
+  * *Standalone (Run)*: `claude mcp add orchid-local docker -- run -i --rm -v orchid-data:/data ghcr.io/mario-guerra/orchid-proxy:latest --mcp --bind-host 127.0.0.1`
 
+Choose one of the two config approaches below:
+
+#### Method A: Connect to Running Container (`docker exec` — Recommended)
+
+If you already have a persistent proxy container running (started in step 2), you can connect the IDE's MCP client directly to it. This runs the MCP process inside the running container namespace, saving resources and ensuring direct access to the database.
+
+```json
+{
+  "mcpServers": {
+    "orchid-local": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "orchid-proxy",
+        "orchid-proxy",
+        "--mcp"
+      ]
+    }
+  }
+}
+```
+> [!IMPORTANT]
+> This requires the running container to be named `orchid-proxy`.
+
+#### Method B: Standalone Container (`docker run`)
+
+Use this if you do not run a persistent proxy server, or if you prefer to launch a dedicated container instance specifically for the MCP server.
 
 ```json
 {
@@ -48,6 +73,9 @@ Add the Orchid configuration to your local client config file:
   }
 }
 ```
+> [!NOTE]
+> Passing `--bind-host 127.0.0.1` at the end bypasses the `ORCHID_API_KEY` requirement for stdio communication, preventing unauthorized network exposure. If you want to enforce key check, omit `--bind-host 127.0.0.1` and pass `-e ORCHID_API_KEY=your_key_here` in the Docker args list.
+
 
 ### Step 2: Restart/Refresh Your Client
 Restart or refresh your IDE/MCP Client to load the server. Your assistant will automatically discover the Orchid MCP tools (like `list_sessions`, `search_exchanges`, etc.).
