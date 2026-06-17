@@ -168,6 +168,64 @@ For more configuration options and advanced setups (including cloud deployment t
 
 Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your coding agent gets direct visibility into your app's recorded LLM traffic — even when those calls happen deep inside frameworks or services it could never see otherwise. Setup instructions are in [docs/features/mcp_server.md](docs/features/mcp_server.md).
 
+## Configuring Model Pricing
+
+To track LLM costs, you can load your model pricing definitions into the Orchid Proxy. By default, untracked models default to a cost of `$0.00`. Costs are defined in **USD per 1,000,000 tokens**.
+
+Here is an example payload configured with up-to-date pricing for models used in the LangGraph project:
+- **`gemini-2.5-flash`**: Input: $0.30, Output: $2.50
+- **`o3-mini`**: Input: $1.10, Output: $4.40
+- **`claude-3.5-sonnet` / `claude-sonnet-4-6`**: Input: $3.00, Output: $15.00
+
+### Method A: REST API (Push)
+
+Send a `POST` request to the `/v1/pricing` endpoint on the query port (default `4321`):
+
+```bash
+curl -X POST http://localhost:4321/v1/pricing \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secure-api-key" \
+  -d '{
+    "google": {
+      "gemini-2.5-flash": {
+        "prompt": 0.30,
+        "completion": 2.50
+      }
+    },
+    "openai": {
+      "o3-mini": {
+        "prompt": 1.10,
+        "completion": 4.40
+      }
+    },
+    "anthropic": {
+      "claude-3.5-sonnet": {
+        "prompt": 3.00,
+        "completion": 15.00
+      },
+      "claude-sonnet-4-6": {
+        "prompt": 3.00,
+        "completion": 15.00
+      }
+    }
+  }'
+```
+
+### Method B: MCP Tool (`update_pricing`)
+
+If your assistant is connected via MCP, it can configure model pricing by invoking the `update_pricing` tool. The tool expects a stringified JSON schema as the `pricing_json` parameter:
+
+```json
+{
+  "name": "update_pricing",
+  "arguments": {
+    "pricing_json": "{\"google\":{\"gemini-2.5-flash\":{\"prompt\":0.30,\"completion\":2.50}},\"openai\":{\"o3-mini\":{\"prompt\":1.10,\"completion\":4.40}},\"anthropic\":{\"claude-3.5-sonnet\":{\"prompt\":3.00,\"completion\":15.00},\"claude-sonnet-4-6\":{\"prompt\":3.00,\"completion\":15.00}}}"
+  }
+}
+```
+
+After updating pricing, you can backfill cost metrics on previously recorded sessions by sending a POST request to `/v1/pricing/recompute` (or calling the `recompute_pricing` MCP tool).
+
 ---
 
 ## What's in this repository

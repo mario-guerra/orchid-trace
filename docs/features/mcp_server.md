@@ -49,8 +49,8 @@ Add the Orchid configuration to your local client config file:
 }
 ```
 
-### Step 2: Restart Your Client
-Restart your IDE or Claude Desktop to load the server. Your assistant will automatically discover the Orchid MCP tools (like `list_sessions`, `search_exchanges`, etc.).
+### Step 2: Restart/Refresh Your Client
+Restart or refresh your IDE/MCP Client to load the server. Your assistant will automatically discover the Orchid MCP tools (like `list_sessions`, `search_exchanges`, etc.).
 
 ---
 
