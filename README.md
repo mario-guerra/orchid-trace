@@ -95,6 +95,12 @@ The proxy ships as a multi-arch container image (Apple Silicon `arm64` and Linux
 *   **Stable**: `ghcr.io/mario-guerra/orchid-proxy:latest`
 *   **Rolling**: `ghcr.io/mario-guerra/orchid-proxy:edge`
 
+### 0. Pull the Proxy Image
+
+```bash
+docker pull ghcr.io/mario-guerra/orchid-proxy:latest
+```
+
 ### 1. Generate an API key
 ```bash
 docker run --rm ghcr.io/mario-guerra/orchid-proxy:latest generate-api-key
@@ -139,5 +145,5 @@ Additional language SDKs will be added under `sdk/` as they become available.
 
 ## License
 
-Orchid and its SDKs are open source under the [Apache 2.0 License](LICENSE).
+Orchid SDKs are open source under the [Apache 2.0 License](LICENSE).
 
