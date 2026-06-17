@@ -22,6 +22,12 @@ Configure Orchid using environment variables or command-line flags to customize 
 | `ORCHID_API_KEY` | Global API key required to authenticate Orchid Control Client and Query API requests. | String | None | Optional (Required if binding to non-localhost) |
 | `ORCHID_PROXY_KEY` | Security key required by the Orchid Proxy (injected as `X-Orchid-Proxy-Key`). | String | None | Optional |
 
+> [!IMPORTANT]
+> **API Key in Docker**: The docker image binds to `0.0.0.0` by default. As a result, you must supply `ORCHID_API_KEY` on container startup. Leaving it empty causes a crash-exit (`CRITICAL SECURITY: Cannot bind to 0.0.0.0 without ORCHID_API_KEY set`).
+>
+> **Exempt Endpoints**: The health check endpoint (`/health`) and the static visualizer assets are open/unauthenticated. All other paths (the proxy port and the data query endpoints) are auth-gated.
+
+
 ## Storage and Retention Settings
 
 | Variable / Flag | Description | Allowed Values | Default | Required / Optional |

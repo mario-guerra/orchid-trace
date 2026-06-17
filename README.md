@@ -107,6 +107,15 @@ docker run --rm ghcr.io/mario-guerra/orchid-proxy:latest generate-api-key
 ```
 
 ### 2. Start the proxy
+
+Start the container and pass your generated key as the `ORCHID_API_KEY` environment variable.
+
+> [!IMPORTANT]
+> **API Key is Mandatory in Docker**: The Orchid Proxy container binds to `0.0.0.0` (`ORCHID_BIND_HOST=0.0.0.0`) by default so that it can receive network traffic. Because it binds to a non-localhost address, setting `ORCHID_API_KEY` is **mandatory** when running inside Docker. If you attempt to start the container without setting `ORCHID_API_KEY`, the proxy will crash-exit on startup for security reasons.
+>
+> **Exempt Public Routes**: The health check endpoint (`/health`) and the static visualizer web assets (HTML, JS, CSS) on the query port (`4321`) do not require the key, allowing you to load the visualizer login screen. All proxying traffic on port `4320` and data API endpoints (under `/v1/*` and `/api/*` on port `4321`) are strictly auth-gated and require the key.
+
+
 ```bash
 docker run -d \
   --name orchid-proxy \
