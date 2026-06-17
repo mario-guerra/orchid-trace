@@ -20,8 +20,12 @@ Add the Orchid configuration to your local client config file:
 * **Claude Desktop**: `~/Library/Application Support/Claude/mcp_config.json`
 * **Cursor**: In Cursor Settings -> Features -> MCP -> Add New Tool (choose `command` type).
 * **Google Antigravity IDE**: `~/.gemini/antigravity-ide/mcp_config.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-ide\mcp_config.json` (Windows).
-* **Claude Code**: Run the command `claude mcp add orchid-local docker -- run -i --rm -v orchid-data:/data ghcr.io/mario-guerra/orchid-proxy:latest --mcp` (or add to `~/.config/claude/mcp.json`).
-
+* **Claude Code**: Run the command `claude mcp add orchid-local docker -- run -i --rm -v orchid-data:/data ghcr.io/mario-guerra/orchid-proxy:latest --mcp --bind-host 127.0.0.1` (or add to `~/.config/claude/mcp.json`).
+> [!NOTE]
+> **Authentication in Stdio Mode**: Because the Docker image binds to `0.0.0.0` by default, launching the container requires a configured `ORCHID_API_KEY` by default. 
+> 
+> * **Option A (No Key setup)**: If you are running the container locally *only* for stdio MCP, you can bypass key validation by passing `--bind-host 127.0.0.1` at the end of the container arguments (included in the examples below). Since communication occurs over stdin/stdout, there is no network exposure.
+> * **Option B (Using a Key)**: If you run a persistent proxy server or want to enforce key check, omit `--bind-host 127.0.0.1` and pass `-e ORCHID_API_KEY=your_key_here` in the Docker args list.
 
 
 ```json
@@ -36,7 +40,9 @@ Add the Orchid configuration to your local client config file:
         "-v",
         "orchid-data:/data",
         "ghcr.io/mario-guerra/orchid-proxy:latest",
-        "--mcp"
+        "--mcp",
+        "--bind-host",
+        "127.0.0.1"
       ]
     }
   }
