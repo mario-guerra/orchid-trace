@@ -43,6 +43,10 @@ In local-only mode (where `ORCHID_API_KEY` is not set), authentication is bypass
 
 ### 2. Global Control Plane Overrides
 
+#### `GET /sessions/active`
+* **Description**: Retrieve the current active session override.
+* **Response**: A JSON object describing the active override, or `null` if no override is set.
+
 #### `POST /sessions/active`
 * **Description**: Configure a global active session ID override. Once set, the proxy forces all incoming LLM requests to record under this session name, overriding any headers passed by the SDK.
 * **Request Body**:
