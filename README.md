@@ -93,7 +93,6 @@ A built-in **MCP server** (SSE) lets AI assistants like Cursor, VS Code, or Clau
 The proxy ships as a multi-arch container image (Apple Silicon `arm64` and Linux `amd64`):
 
 *   **Stable**: `ghcr.io/mario-guerra/orchid-proxy:latest`
-*   **Rolling**: `ghcr.io/mario-guerra/orchid-proxy:edge`
 
 ### 0. Pull the Proxy Image
 
