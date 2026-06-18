@@ -86,3 +86,46 @@ In local-only mode (where `ORCHID_API_KEY` is not set), authentication is bypass
 #### `GET /health`
 * **Description**: Inspect proxy health status. Bypasses authentication checks.
 * **Response**: `{"status": "ok"}`
+
+#### `GET /stats`
+* **Description**: Retrieve global proxy database statistics, including sizing, limits, and aggregate token/cost stats.
+* **Response**: A JSON object of stats:
+  ```json
+  {
+    "total_sessions": 42,
+    "total_exchanges": 1280,
+    "total_prompt_tokens": 542001,
+    "total_completion_tokens": 125032,
+    "total_cost_usd": 12.35,
+    "db_size_bytes": 1048576,
+    "max_db_mb": 1024,
+    "retention_days": 30
+  }
+  ```
+
+---
+
+### 5. Model Context Protocol (MCP) Stream & Message Endpoints
+
+These endpoints support the Model Context Protocol (MCP) Streamable HTTP transport and SSE (Server-Sent Events) integrations.
+
+#### `POST /mcp` (or `POST /mcp/`)
+* **Description**: Streamable HTTP transport message endpoint. Receives single JSON-RPC messages (e.g., `initialize`, requests, or notifications).
+* **Headers**: 
+  * `mcp-protocol-version`: Negotiated version (e.g., `2024-11-05` or `2025-03-26`).
+  * `mcp-session-id`: Header identifying the client session.
+* **Response**: A JSON-RPC response payload on success. Spawns a new session with an `mcp-session-id` response header if sending the `initialize` method.
+
+#### `DELETE /mcp` (or `DELETE /mcp/`)
+* **Description**: Terminate the streamable HTTP session specified by the `mcp-session-id` header.
+* **Response**: `204 No Content` on success.
+
+#### `GET /mcp/sse`
+* **Description**: SSE channel endpoint for the remote SSE-based MCP integration. Initializes the unidirectional server-to-client event stream.
+* **Response**: Event-stream containing a handshake event `endpoint` pointing to the message target URL (including a unique `connectionId`).
+
+#### `POST /mcp/message`
+* **Description**: Accepts JSON-RPC requests from the client and dispatches them to the associated SSE transport session.
+* **Query Parameters**:
+  * `connectionId`: The unique connection UUID assigned during the `/mcp/sse` handshake.
+* **Response**: `200 OK` on success. The actual response is pushed asynchronously through the active SSE stream.

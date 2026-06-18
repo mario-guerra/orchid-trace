@@ -136,14 +136,71 @@ Your assistant automatically discovers these tools once connected:
 * **`export_session`**: Export a session as a portable JSON fixture payload (useful for local mocking or unit tests).
 * **`import_session`**: Import/seed a session fixture payload into the database.
 
+### Cost & Pricing Configuration
+* **`get_pricing`**: Retrieve the currently active pricing definitions (provider -> model -> cost mappings).
+* **`update_pricing`**: Upload new pricing definitions to the proxy. Accepts a stringified JSON schema containing provider -> model -> cost mappings per million tokens.
+  * *Example Pricing JSON Format:*
+    ```json
+    {
+      "openai": {
+        "gpt-5.5": { "prompt": 5.0, "completion": 15.0 },
+        "gpt-5-mini": { "prompt": 0.5, "completion": 1.5 }
+      },
+      "anthropic": {
+        "claude-4-6-sonnet": { "prompt": 3.0, "completion": 15.0 }
+      }
+    }
+    ```
+* **`recompute_pricing`**: Recompute `cost_usd` for all stored exchanges using the currently active pricing definitions. Use after updating pricing to backfill costs.
+
+---
+
+## 4. Available MCP Resources & Templates
+
+For MCP clients that support the Resource specification, Orchid exposes data nodes directly under the `orchid://` URI scheme:
+
+### Resources
+* **`orchid://sessions`**: A JSON list of all recorded trace sessions with their metadata.
+* **`orchid://jobs`**: A JSON list of pipeline jobs recorded by the proxy.
+
+### Resource Templates
+* **`orchid://sessions/{session_id}`**: Retrieves the complete session log/fixture for the specified `session_id`.
+* **`orchid://jobs/{job_id}/events`**: Retrieves a timelined list of step execution events for a single pipeline run.
+
+---
+
+## 5. Available MCP Prompts
+
+Orchid includes built-in prompt templates that can guide assistant analysis:
+
+* **`analyze_failure`**: Loads the failed step execution logs of a pipeline job directly into the LLM context to diagnose issues (e.g., rate limits, bad JSON structure, provider errors).
+  * *Arguments*: `job_id` (string, required)
+* **`optimize_cost`**: Generates a summary analysis prompt containing prompt/completion ratios and costs to help identify opportunities to save costs or use cheaper models.
+  * *Arguments*: `session_id` (string, required)
+
 ---
 
 ## Configuration Options
 
+Orchid Proxy configuration can be passed via command-line flags or environment variables:
 
-| CLI Flag | Description | Default |
-| :--- | :--- | :--- |
-| `--mcp` | Runs the proxy in stdin/stdout MCP mode (blocks HTTP listener). | `false` |
+| CLI Flag | Environment Variable | Description | Default |
+| :--- | :--- | :--- | :--- |
+| `--mcp` | N/A | Runs the proxy in stdin/stdout MCP mode (blocks HTTP listener). | `false` |
+| `--bind-host` | `ORCHID_BIND_HOST` | Host IP address to bind to (e.g., `127.0.0.1` or `0.0.0.0`). | `127.0.0.1` |
+| `--proxy-port` | `ORCHID_PROXY_PORT` | Port for the reverse proxy listener. | `4320` |
+| `--query-port` | `ORCHID_QUERY_PORT` | Port for the query API and SSE endpoints. | `4321` |
+| `--api-key` | `ORCHID_API_KEY` | Global API Key for securing HTTP/SSE endpoints. | None |
+| `--db-path` | `ORCHID_DB_PATH` | Path to the SQLite database. | `~/.orchid/orchid.db` |
+| `--pricing-file` | `ORCHID_PRICING_FILE` | Path to a local JSON file containing pricing definitions. | None |
+| `--retention-days` | `ORCHID_RETENTION_DAYS` | Automatically delete sessions older than this many days (0 = disabled). | `30` |
+| `--max-db-mb` | `ORCHID_MAX_DB_MB` | Prune oldest sessions when database size exceeds this value in MB (0 = disabled). | `1024` |
+| `--default-provider` | `ORCHID_DEFAULT_PROVIDER` | Default upstream provider when no path prefix is used. | None |
+| `--session-id` | `ORCHID_SESSION_ID` | Force recording under a specific session ID (groups exchanges). | None |
+
+### Subcommands
+
+* **`generate-api-key`**: Generates a secure, high-entropy global API key.
 
 ---
 
