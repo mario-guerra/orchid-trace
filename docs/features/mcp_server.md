@@ -137,8 +137,8 @@ Your assistant automatically discovers these tools once connected:
 * **`import_session`**: Import/seed a session fixture payload into the database.
 
 ### Cost & Pricing Configuration
-* **`get_pricing`**: Retrieve the currently active pricing definitions (provider -> model -> cost mappings).
-* **`update_pricing`**: Upload new pricing definitions to the proxy. Accepts a stringified JSON schema containing provider -> model -> cost mappings per million tokens.
+* **`get_pricing`**: Retrieve the currently active pricing definitions (provider -> model -> cost mappings). If no pricing is loaded, returns a structured template with `status: "no_pricing_configured"`, an `instructions` field, and a `template` object pre-populated with the distinct provider/model pairs observed in recorded traffic (zero values). Fill in the costs, serialize `template` to a JSON string, and pass it to `update_pricing`. Save the result locally to re-apply it on proxy restart.
+* **`update_pricing`**: Upload new pricing definitions to the proxy. Accepts a stringified JSON schema containing provider -> model -> cost mappings per million tokens. Pricing is stored in-memory only — restart clears it. Use `get_pricing` to retrieve and save your config locally for reuse.
   * *Example Pricing JSON Format:*
     ```json
     {
@@ -151,7 +151,7 @@ Your assistant automatically discovers these tools once connected:
       }
     }
     ```
-* **`recompute_pricing`**: Recompute `cost_usd` for all stored exchanges using the currently active pricing definitions. Use after updating pricing to backfill costs.
+* **`recompute_pricing`**: Recompute `cost_usd` for all stored exchanges using the currently active pricing definitions. Use after updating pricing to backfill costs on sessions recorded before pricing was loaded.
 
 ---
 
