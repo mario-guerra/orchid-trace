@@ -272,6 +272,7 @@ If your assistant is connected via MCP, it can configure model pricing by invoki
   }
 }
 ```
+**NOTE** If you don't have a local pricing configuration, use the `get_pricing` tool to fetch the pricing schema template from the proxy. Your AI agent can then look up current model costs via web search and submit them using `update_pricing`.
 
 After updating pricing, you can backfill cost metrics on previously recorded sessions by sending a POST request to `/v1/pricing/recompute` (or calling the `recompute_pricing` MCP tool).
 
