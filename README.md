@@ -280,20 +280,23 @@ After updating pricing, you can backfill cost metrics on previously recorded ses
 
 If you already have a recorded trace fixture (e.g., from a test run or shared by a teammate) that you want to replay or inspect, you can import it into the running proxy.
 
-#### Method A: REST API (Push)
+#### Method A: REST API (File Upload)
 
-Send a `POST` request to the `/v1/sessions/import` endpoint on the query port (default `4321`) with your fixture JSON:
+If you are dealing with a large fixture, or if your AI assistant is running in a local sandbox that restricts terminal processes, you should upload the fixture file directly via the REST API. If the proxy is running locally, you must execute this command yourself in an unrestricted host terminal.
 
 ```bash
-curl -X POST http://localhost:4321/v1/sessions/import \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:4321/api/sessions/import \
+  --noproxy "*" \
   -H "Authorization: Bearer your-secure-api-key" \
-  -d @path/to/fixture.json
+  -F "file=@/absolute/path/to/fixture.json"
 ```
 
 #### Method B: MCP Tool (`import_session`)
 
-If your assistant is connected via MCP, it can seed the database directly by calling the `import_session` tool. Provide the raw JSON fixture string as the `fixture_json` argument:
+If your assistant is connected via MCP and the fixture is small (< 100KB), it can seed the database directly by calling the `import_session` tool over stdio. 
+
+> [!WARNING]
+> Do **not** use the MCP tool for large fixtures. Large JSON payloads will exceed SSH stdio truncation limits. Additionally, if the proxy is running locally, AI agents cannot autonomously upload files to it using `curl` due to OS-level sandbox network restrictions blocking connections to `localhost`. In these cases, the user must perform **Method A** manually.
 
 ```json
 {
