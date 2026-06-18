@@ -276,7 +276,35 @@ If your assistant is connected via MCP, it can configure model pricing by invoki
 
 After updating pricing, you can backfill cost metrics on previously recorded sessions by sending a POST request to `/v1/pricing/recompute` (or calling the `recompute_pricing` MCP tool).
 
-### 7. Next steps
+### 7. Load a trace fixture
+
+If you already have a recorded trace fixture (e.g., from a test run or shared by a teammate) that you want to replay or inspect, you can import it into the running proxy.
+
+#### Method A: REST API (Push)
+
+Send a `POST` request to the `/v1/sessions/import` endpoint on the query port (default `4321`) with your fixture JSON:
+
+```bash
+curl -X POST http://localhost:4321/v1/sessions/import \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secure-api-key" \
+  -d @path/to/fixture.json
+```
+
+#### Method B: MCP Tool (`import_session`)
+
+If your assistant is connected via MCP, it can seed the database directly by calling the `import_session` tool. Provide the raw JSON fixture string as the `fixture_json` argument:
+
+```json
+{
+  "name": "import_session",
+  "arguments": {
+    "fixture_json": "{ \"session_id\": \"my-fixture\", \"exchanges\": [...] }"
+  }
+}
+```
+
+### 8. Next steps
 
 Once you have pointed your application to the proxy and configured model pricing, you are ready to start inspecting traces:
 
