@@ -281,7 +281,7 @@ After updating pricing, you can backfill cost metrics on previously recorded ses
 Once you have pointed your application to the proxy and configured model pricing, you are ready to start inspecting traces:
 
 1. **Record traffic**: Run your application (or its test suite). The proxy will intercept and save all upstream LLM calls.
-2. **Open the visualizer**: Navigate to `http://localhost:4321` in your browser. Enter your configured `ORCHID_API_KEY` when prompted to authorize and access the session dashboard.
+2. **Open the visualizer**: Navigate to [http://localhost:4321](http://localhost:4321) in your browser. Enter your configured `ORCHID_API_KEY` when prompted to authorize and access the session dashboard.
 3. **Analyze and debug**: Inspect your traces in real-time, view detailed token cost breakdowns, or replay execution paths.
 4. **Explore further**: Check out the guides on [session recording](docs/features/session_recording.md) and [replay testing](docs/features/replay_testing.md) to build automated regressions.
 
