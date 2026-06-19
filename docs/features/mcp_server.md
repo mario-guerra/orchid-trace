@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Model Context Protocol (MCP) Server is embedded directly within the Orchid Proxy. It allows AI agents and IDE tools (like Claude Desktop, Cursor, or VS Code Copilot) to query, search, and manage recorded sessions programmatically, enabling agent-driven debugging and triage.
+The Model Context Protocol (MCP) Server is embedded directly within the Orchid Proxy. It allows AI agents and IDE tools (like Claude Code, Cursor, or VS Code Copilot) to query, search, and manage recorded sessions programmatically, enabling agent-driven debugging and triage.
 
 The embedded server supports two distinct integration methods:
 1. **Local Stdio Mode**: The IDE spawns the Orchid Proxy container locally over standard input/output.
@@ -17,7 +17,7 @@ Use this pattern when running the Orchid Proxy container and the IDE/MCP client 
 ### Step 1: Configure Your Client
 
 Add the Orchid configuration to your local client config file:
-* **Claude Desktop**: `~/Library/Application Support/Claude/mcp_config.json`
+* **Claude Code**: `~/Library/Application Support/Claude/mcp_config.json`
 * **Cursor**: In Cursor Settings -> Features -> MCP -> Add New Tool (choose `command` type).
 * **Google Antigravity IDE**: `~/.gemini/antigravity-ide/mcp_config.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-ide\mcp_config.json` (Windows).
 * **Claude Code**:

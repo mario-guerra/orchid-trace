@@ -9,7 +9,7 @@
 *   **Debug** failures in the built-in web UI or via MCP tools from your IDE
 *   **Replay** recorded runs offline — deterministic tests with zero API cost
 
-**Orchid gives your coding agent the ability to debug your AI app.** The proxy has a built-in MCP server, so when an LLM call is buried deep in your stack — behind a framework, a queue, three layers of abstraction — your AI assistant in Cursor, VS Code, or Claude Desktop can query the recorded traffic directly. No print statements, no log spelunking: ask your agent *"why did this run fail?"* and it can go look, figure out why, and fix it for you.
+**Orchid gives your coding agent the ability to debug your AI app.** The proxy has a built-in MCP server, so when an LLM call is buried deep in your stack — behind a framework, a queue, three layers of abstraction — your AI assistant in Cursor, VS Code, or Claude Code can query the recorded traffic directly. No print statements, no log spelunking: ask your agent *"why did this run fail?"* and it can go look, figure out why, and fix it for you.
 
 You choose how much to record: route only your LLM traffic through the proxy for lightweight inspection, or capture everything for the full picture. To **replay** a run with perfect fidelity, all of the agent's network traffic must go through the proxy — replay works by serving back the recorded responses, so anything that wasn't recorded can't be replayed.
 
@@ -88,7 +88,7 @@ The proxy embeds a React-based dashboard on port `4321` — nothing extra to ins
 </p>
 
 ### MCP Server for AI Assistants
-A built-in **MCP server** (SSE) lets AI assistants like Cursor, VS Code, or Claude Desktop query the recorded traffic directly: analyze prompt performance, pull token/cost statistics, or fetch payload examples as context for editing code.
+A built-in **MCP server** (SSE) lets AI assistants like Cursor, VS Code, or Claude Code query the recorded traffic directly: analyze prompt performance, pull token/cost statistics, or fetch payload examples as context for editing code.
 
 <p align="center">
   <img src="assets/mcp-workspace-preview.svg" alt="Animated preview of an IDE AI assistant debugging a RAG hallucination: the agent calls the Orchid MCP search_exchanges tool, inspects the recorded request payload, and discovers the vector DB injected the wrong document into the prompt context" width="720" />
@@ -173,7 +173,7 @@ For more configuration options and advanced setups (including cloud deployment t
 
 ### 4. Connect your AI assistant (MCP)
 
-Hook the proxy's MCP server into Cursor, VS Code, or Claude Desktop and your coding agent gets direct visibility into your app's recorded LLM traffic. 
+Hook the proxy's MCP server into Cursor, VS Code, or Claude Code and your coding agent gets direct visibility into your app's recorded LLM traffic. 
 
 Add the configuration below to your IDE's `mcp_config.json` (e.g., `~/.gemini/antigravity-ide/mcp_config.json` or `~/Library/Application Support/Claude/mcp_config.json`):
 

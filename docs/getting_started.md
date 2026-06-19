@@ -2,7 +2,7 @@
 
 ## Overview
 
-Orchid (Orchestration Interactive Debugger) is a local-first, zero-instrumentation tool designed to record, inspect, and replay AI agent and LLM traffic. It acts as a lightweight intercepting proxy that captures all outgoing requests at the transport layer into a local SQLite database. It provides an embedded web visualizer for step-by-step telemetry analysis, and an embedded Model Context Protocol (MCP) server so that AI assistants (such as Cursor, VS Code, or Claude Desktop) can directly query and debug your agent's execution sequence in natural language.
+Orchid (Orchestration Interactive Debugger) is a local-first, zero-instrumentation tool designed to record, inspect, and replay AI agent and LLM traffic. It acts as a lightweight intercepting proxy that captures all outgoing requests at the transport layer into a local SQLite database. It provides an embedded web visualizer for step-by-step telemetry analysis, and an embedded Model Context Protocol (MCP) server so that AI assistants (such as Cursor, VS Code, or Claude Code) can directly query and debug your agent's execution sequence in natural language.
 
 
 ## Prerequisites
@@ -88,7 +88,7 @@ await init();
 
 ## Connecting Your AI Assistant (MCP)
 
-Orchid embeds a Model Context Protocol (MCP) server that exposes its telemetry database to your agentic coding environments (like Cursor, VS Code, or Claude Desktop). This allows your AI coding assistant to query, search, and analyze recorded LLM traffic directly using natural language—enabling your coding agent to debug your AI application automatically.
+Orchid embeds a Model Context Protocol (MCP) server that exposes its telemetry database to your agentic coding environments (like Cursor, VS Code, or Claude Code). This allows your AI coding assistant to query, search, and analyze recorded LLM traffic directly using natural language—enabling your coding agent to debug your AI application automatically.
 
 To connect your IDE assistant:
 * For local development, configure your client to run the proxy container in interactive stdio mode with the `--mcp` flag.
