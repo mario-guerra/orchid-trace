@@ -1,6 +1,6 @@
 {
   "name": "orchid-sdk",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Thin TypeScript SDK for Orchid — the Orchestration Interactive Debugger. Routes outbound LLM requests through the local Orchid Proxy for capture, replay, and interactive debugging.",
   "author": "Orchid Team <team@orchid.dev>",
   "repository": {
