@@ -1,3 +1,5 @@
+import http from "http";
+import https from "https";
 import { currentMode, currentSessionId } from "./context.js";
 
 const CORE_PROVIDERS = [
@@ -10,23 +12,17 @@ const CORE_PROVIDERS = [
 const LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"];
 
 let patched = false;
+let httpPatched = false;
 let offlineFallback = false;
 let originalFetch: typeof globalThis.fetch | undefined;
+let originalHttpRequest: typeof http.request | undefined;
+let originalHttpsRequest: typeof https.request | undefined;
+
 /** Tracks env vars set by orchid-sdk so uninstall() only removes what it owned. */
 const ownedEnvVars = new Set<string>();
 
 function proxyUrl(): string {
   return process.env.ORCHID_PROXY_URL ?? "http://127.0.0.1:4320/v1";
-}
-
-/**
- * Returns the proxy origin (scheme + host + port, no path) for use as
- * HTTPS_PROXY / HTTP_PROXY. gaxios expects an origin-only URL.
- * e.g. "http://127.0.0.1:4320/v1" → "http://127.0.0.1:4320"
- */
-function proxyOrigin(): string {
-  const u = new URL(proxyUrl());
-  return `${u.protocol}//${u.host}`;
 }
 
 /** Sets an env var only if not already defined, and records ownership. */
@@ -35,6 +31,130 @@ function setEnvIfAbsent(key: string, value: string): void {
     process.env[key] = value;
     ownedEnvVars.add(key);
   }
+}
+
+function normalizeArgs(
+  defaultProtocol: string,
+  arg1: any,
+  arg2: any,
+  arg3: any
+): { options: any; callback: any; originalUrl: URL } {
+  let options: any = {};
+  let callback: any;
+  let urlStr = "";
+
+  if (typeof arg1 === "string" || arg1 instanceof URL) {
+    urlStr = arg1.toString();
+    if (typeof arg2 === "object") {
+      options = { ...arg2 };
+      callback = arg3;
+    } else {
+      callback = arg2;
+    }
+  } else if (typeof arg1 === "object") {
+    options = { ...arg1 };
+    callback = arg2;
+  }
+
+  options.headers = options.headers ? { ...options.headers } : {};
+
+  // Reconstruct target URL from options if urlStr is empty
+  if (!urlStr) {
+    const protocol = options.protocol || defaultProtocol;
+    const host = options.host || options.hostname || "localhost";
+    const hostWithPort = host.includes(":") ? host : `${host}${options.port ? `:${options.port}` : ""}`;
+    const path = options.path || "/";
+    urlStr = `${protocol}//${hostWithPort}${path}`;
+  }
+
+  const originalUrl = new URL(urlStr);
+  return { options, callback, originalUrl };
+}
+
+function patchHttp(): void {
+  if (httpPatched) return;
+  originalHttpRequest = http.request;
+  originalHttpsRequest = https.request;
+
+  http.request = function (this: any, arg1: any, arg2: any, arg3: any): http.ClientRequest {
+    if (!httpPatched) {
+      return originalHttpRequest!.apply(this, arguments as any);
+    }
+    const { options, callback, originalUrl } = normalizeArgs("http:", arg1, arg2, arg3);
+    
+    if (shouldIntercept(originalUrl)) {
+      const rewrittenUrl = rewriteUrl(originalUrl);
+      options.protocol = rewrittenUrl.protocol;
+      options.hostname = rewrittenUrl.hostname;
+      options.host = rewrittenUrl.host;
+      options.port = rewrittenUrl.port;
+      options.path = rewrittenUrl.pathname + rewrittenUrl.search;
+      
+      delete options.agent;
+      delete options.createConnection;
+      if (options.headers) {
+        delete options.headers["host"];
+        delete options.headers["Host"];
+      }
+
+      const headersObj = new Headers(options.headers);
+      injectHeaders(headersObj, rewrittenUrl, originalUrl);
+      const newHeaders: Record<string, string> = {};
+      headersObj.forEach((val, key) => {
+        newHeaders[key] = val;
+      });
+      options.headers = newHeaders;
+      
+      return originalHttpRequest!.call(this, options, callback);
+    }
+    
+    return originalHttpRequest!.apply(this, arguments as any);
+  } as any;
+
+  https.request = function (this: any, arg1: any, arg2: any, arg3: any): http.ClientRequest {
+    if (!httpPatched) {
+      return originalHttpsRequest!.apply(this, arguments as any);
+    }
+    const { options, callback, originalUrl } = normalizeArgs("https:", arg1, arg2, arg3);
+    
+    if (shouldIntercept(originalUrl)) {
+      const rewrittenUrl = rewriteUrl(originalUrl);
+      options.protocol = rewrittenUrl.protocol;
+      options.hostname = rewrittenUrl.hostname;
+      options.host = rewrittenUrl.host;
+      options.port = rewrittenUrl.port;
+      options.path = rewrittenUrl.pathname + rewrittenUrl.search;
+      
+      delete options.agent;
+      delete options.createConnection;
+      if (options.headers) {
+        delete options.headers["host"];
+        delete options.headers["Host"];
+      }
+
+      const headersObj = new Headers(options.headers);
+      injectHeaders(headersObj, rewrittenUrl, originalUrl);
+      const newHeaders: Record<string, string> = {};
+      headersObj.forEach((val, key) => {
+        newHeaders[key] = val;
+      });
+      options.headers = newHeaders;
+      
+      // Redirect HTTPS request to HTTP proxy
+      return originalHttpRequest!.call(this, options, callback);
+    }
+    
+    return originalHttpsRequest!.apply(this, arguments as any);
+  } as any;
+
+  httpPatched = true;
+}
+
+function unpatchHttp(): void {
+  // Set the deactivation flag to false. The monkeypatched functions
+  // remain in place to avoid breaking wrapping order, but behave
+  // as passive passthroughs.
+  httpPatched = false;
 }
 
 function envList(name: string): string[] {
@@ -293,30 +413,25 @@ export async function init(options: InitOptions = {}): Promise<void> {
   }
 
   if (!offlineFallback) {
-    process.env.OPENAI_BASE_URL = proxy;
-    // Route gaxios (used by @langchain/google-vertexai) through the proxy.
-    // gaxios natively reads HTTPS_PROXY / HTTP_PROXY. We only set them if
-    // the caller hasn't already configured a proxy (e.g. a corporate proxy).
-    const origin = proxyOrigin();
-    setEnvIfAbsent("HTTPS_PROXY", origin);
-    setEnvIfAbsent("HTTP_PROXY", origin);
-    setEnvIfAbsent("NO_PROXY", "localhost,127.0.0.1");
+    setEnvIfAbsent("OPENAI_BASE_URL", proxy);
   }
 
   if (!patched && !offlineFallback) {
     originalFetch = globalThis.fetch;
     globalThis.fetch = orchidFetch;
+    patchHttp();
     patched = true;
   }
 }
 
-/** Restores the original global fetch. Intended for tests. */
+/** Restores the original global fetch and HTTP/HTTPS patch. Intended for tests. */
 export function uninstall(): void {
   if (patched && originalFetch) {
     globalThis.fetch = originalFetch;
     originalFetch = undefined;
-    patched = false;
   }
+  unpatchHttp();
+  patched = false;
   // Clean up only the env vars that orchid-sdk itself set.
   for (const key of ownedEnvVars) delete process.env[key];
   ownedEnvVars.clear();

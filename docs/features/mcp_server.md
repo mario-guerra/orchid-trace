@@ -4,20 +4,129 @@
 
 The Model Context Protocol (MCP) Server is embedded directly within the Orchid Proxy. It allows AI agents and IDE tools (like Claude Code, Cursor, or VS Code Copilot) to query, search, and manage recorded sessions programmatically, enabling agent-driven debugging and triage.
 
-The embedded server supports two distinct integration methods:
-1. **Local Stdio Mode**: The IDE spawns the Orchid Proxy container locally over standard input/output.
-2. **Remote HTTP/SSE Mode**: The IDE connects to the remote proxy query service (typically over an SSH/IAP tunnel) using standard HTTP headers.
+The embedded server supports three integration methods:
+1. **Local HTTP Mode** *(Recommended)*: The IDE connects directly to the running Orchid Proxy process over HTTP.
+2. **Local Stdio Mode** *(Legacy / Zero-Config)*: The IDE spawns the Orchid Proxy container locally over standard input/output.
+3. **Remote HTTP/SSE Mode**: The IDE connects to a remote proxy query service (typically over an SSH/IAP tunnel) using standard HTTP headers.
 
 ---
 
-## 1. Local Stdio Integration
+## 1. Local HTTP Integration *(Recommended)*
+
+Use this pattern when running the Orchid Proxy on your local development machine. The HTTP transport connects directly to the running proxy process — no separate subprocess is spawned.
+
+**Prerequisite**: The proxy must be running (`docker compose up -d`) and `ORCHID_API_KEY` must be set.
+
+### VS Code GitHub Copilot
+
+Create or edit `.vscode/mcp.json` in your workspace root. For user-profile scope (all workspaces), use **MCP: Open User Configuration** from the Command Palette.
+
+> VS Code uses `"servers"` (not `"mcpServers"`), requires `"type": "http"`, and uses `${input:id}` for secure values. VS Code does **not** expand shell env vars in `headers` — `$ORCHID_API_KEY` would be sent literally. The `inputs` array causes VS Code to prompt once on first server start and store the value securely.
+
+```json
+{
+  "servers": {
+    "orchid": {
+      "type": "http",
+      "url": "http://localhost:4321/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:orchidApiKey}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "orchidApiKey",
+      "type": "promptString",
+      "description": "Orchid API Key (orchid_live_...)",
+      "password": true
+    }
+  ]
+}
+```
+
+### Claude Code
+
+```bash
+claude mcp add --transport http orchid http://localhost:4321/v1/mcp \
+  --header "Authorization: Bearer $ORCHID_API_KEY" \
+  --scope user
+```
+
+> `--scope user` stores the config in `~/.claude.json` and makes it available across all projects. The shell expands `$ORCHID_API_KEY` at add-time and stores the resolved token. If you rotate your API key, re-run this command.
+
+### Cursor
+
+Create `.cursor/mcp.json` in your project root (project-local) or `~/.cursor/mcp.json` (global). Cursor uses `${env:NAME}` syntax:
+
+> `${env:ORCHID_API_KEY}` is Cursor's interpolation syntax. `${ORCHID_API_KEY}` (without `env:`) would be sent literally and cause 401s. `ORCHID_API_KEY` must be set in the shell environment before launching Cursor.
+
+```json
+{
+  "mcpServers": {
+    "orchid": {
+      "url": "http://localhost:4321/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:ORCHID_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Google Antigravity IDE
+
+Antigravity IDE only supports stdio transport. Use [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) as a stdio→HTTP bridge (Node.js 18+ required). Config file: `~/.gemini/antigravity-ide/mcp_config.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-ide\mcp_config.json` (Windows).
+
+> **Do not commit this file** — it contains a plaintext API key. Replace `orchid_live_your_key_here` with your actual key.
+>
+> `--allow-http` is required — `mcp-remote` rejects non-HTTPS URLs by default. The header is split across the `--header` arg and `env.AUTH_HEADER` to work around a known issue in some IDE clients where spaces inside args are not escaped correctly. To clear cached auth state after key rotation: `rm -rf ~/.mcp-auth`.
+
+```json
+{
+  "mcpServers": {
+    "orchid": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://localhost:4321/v1/mcp",
+        "--allow-http",
+        "--transport", "http-only",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer orchid_live_your_key_here"
+      }
+    }
+  }
+}
+```
+
+### OpenAI Codex
+
+Add to `~/.codex/config.toml`. Codex uses TOML format and requires the env var **name** (not the value):
+
+> `bearer_token_env_var` takes the name of the env var (the string `"ORCHID_API_KEY"`). Codex reads the value at runtime. Inline secrets (`bearer_token = "..."`) are rejected by the runtime with an error. `ORCHID_API_KEY` must be set when running `codex`.
+
+```toml
+[mcp_servers.orchid]
+url = "http://localhost:4321/v1/mcp"
+bearer_token_env_var = "ORCHID_API_KEY"
+```
+
+---
+
+## 2. Local Stdio Integration *(Legacy / Zero-Config)*
+
+> **Note:** The stdio transport spawns a separate `orchid-proxy --mcp` process inside the container. That process shares the SQLite database (read operations work correctly) but has its own isolated in-memory state. Use HTTP transport (Section 1) for the recommended local integration.
 
 Use this pattern when running the Orchid Proxy container and the IDE/MCP client on the same local development machine.
 
 ### Step 1: Configure Your Client
 
 Add the Orchid configuration to your local client config file:
-* **Claude Code**: `~/Library/Application Support/Claude/mcp_config.json`
 * **Cursor**: In Cursor Settings -> Features -> MCP -> Add New Tool (choose `command` type).
 * **Google Antigravity IDE**: `~/.gemini/antigravity-ide/mcp_config.json` (macOS/Linux) or `%USERPROFILE%\.gemini\antigravity-ide\mcp_config.json` (Windows).
 * **Claude Code**:
@@ -82,7 +191,7 @@ Restart or refresh your IDE/MCP Client to load the server. Your assistant will a
 
 ---
 
-## 2. Remote HTTP/SSE Integration (Recommended for Cloud)
+## 3. Remote HTTP/SSE Integration (Recommended for Cloud)
 
 Use this pattern when the Orchid Proxy is running in a cloud virtual machine or staging container. Since exposing the ports directly to the public internet is unsafe, connect using an encrypted SSH tunnel.
 
@@ -111,7 +220,7 @@ Add the server configuration using the streamable HTTP transport endpoint. Make 
 
 ---
 
-## 3. Available MCP Tools
+## 4. Available MCP Tools
 
 Your assistant automatically discovers these tools once connected:
 
@@ -156,7 +265,7 @@ Your assistant automatically discovers these tools once connected:
 
 ---
 
-## 4. Available MCP Resources & Templates
+## 5. Available MCP Resources & Templates
 
 For MCP clients that support the Resource specification, Orchid exposes data nodes directly under the `orchid://` URI scheme:
 
@@ -170,7 +279,7 @@ For MCP clients that support the Resource specification, Orchid exposes data nod
 
 ---
 
-## 5. Available MCP Prompts
+## 6. Available MCP Prompts
 
 Orchid includes built-in prompt templates that can guide assistant analysis:
 
@@ -214,3 +323,7 @@ Orchid Proxy configuration can be passed via command-line flags or environment v
 ### Symptom: Database is locked error
 * **Cause**: Multiple docker containers are trying to write to the SQLite database concurrently.
 * **Fix**: Ensure your proxy instance is configured to run SQLite in WAL (Write-Ahead Logging) mode, or run exactly 1 active container replica using the volume.
+
+### Symptom: `update_pricing` appears to succeed but recorded exchanges show `NULL` costs
+* **Cause**: Pricing was uploaded but exchanges recorded before the upload were not backfilled. Costs are computed at ingest time; existing rows are not retroactively updated.
+* **Fix**: After uploading pricing via `update_pricing`, call `recompute_pricing` to backfill `cost_usd` on previously recorded exchanges.

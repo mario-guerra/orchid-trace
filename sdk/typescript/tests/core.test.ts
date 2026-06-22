@@ -1,3 +1,5 @@
+import http from "http";
+import https from "https";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   injectHeaders,
@@ -241,47 +243,91 @@ describe("init", () => {
     );
   });
 
-  it("sets HTTPS_PROXY and HTTP_PROXY to proxy origin (no path)", async () => {
+  it("intercepts http.request to core providers and redirects to proxy", async () => {
+    const mockReq = {} as any;
+    const mockRequest = vi.spyOn(http, "request").mockReturnValue(mockReq);
+
     await init({ bypassHealthCheck: true });
-    expect(process.env.HTTPS_PROXY).toBe("http://127.0.0.1:4320");
-    expect(process.env.HTTP_PROXY).toBe("http://127.0.0.1:4320");
-    expect(process.env.NO_PROXY).toBe("localhost,127.0.0.1");
+
+    http.request({
+      hostname: "api.openai.com",
+      path: "/v1/chat/completions",
+      method: "POST",
+      headers: { Authorization: "Bearer test" },
+    });
+
+    expect(mockRequest).toHaveBeenCalledTimes(1);
+    const [options] = mockRequest.mock.calls[0] as any;
+    expect(options.protocol).toBe("http:");
+    expect(options.hostname).toBe("127.0.0.1");
+    expect(options.port).toBe("4320");
+    expect(options.path).toBe("/v1/chat/completions");
+    expect(options.headers["x-orchid-target-url"]).toBe("http://api.openai.com");
   });
 
-  it("strips /v1 path from ORCHID_PROXY_URL when setting HTTPS_PROXY", async () => {
-    process.env.ORCHID_PROXY_URL = "http://proxy.internal:9999/v1";
+  it("redirects https.request to plain http proxy", async () => {
+    const mockReq = {} as any;
+    const mockHttpRequest = vi.spyOn(http, "request").mockReturnValue(mockReq);
+    const mockHttpsRequest = vi.spyOn(https, "request").mockReturnValue(mockReq);
+
     await init({ bypassHealthCheck: true });
-    expect(process.env.HTTPS_PROXY).toBe("http://proxy.internal:9999");
-    expect(process.env.HTTP_PROXY).toBe("http://proxy.internal:9999");
+
+    https.request({
+      hostname: "api.openai.com",
+      path: "/v1/chat/completions",
+      method: "POST",
+      headers: { Authorization: "Bearer test" },
+    });
+
+    // Should call the original http.request (not https.request) because proxy is plain HTTP
+    expect(mockHttpRequest).toHaveBeenCalledTimes(1);
+    expect(mockHttpsRequest).not.toHaveBeenCalled();
+
+    const [options] = mockHttpRequest.mock.calls[0] as any;
+    expect(options.protocol).toBe("http:");
+    expect(options.hostname).toBe("127.0.0.1");
+    expect(options.port).toBe("4320");
+    expect(options.path).toBe("/v1/chat/completions");
+    expect(options.headers["x-orchid-target-url"]).toBe("https://api.openai.com");
   });
 
-  it("does not override a pre-existing HTTPS_PROXY", async () => {
-    process.env.HTTPS_PROXY = "http://corp-proxy:8080";
+  it("does not intercept non-core provider http.request by default", async () => {
+    const mockReq = {} as any;
+    const mockRequest = vi.spyOn(http, "request").mockReturnValue(mockReq);
+
     await init({ bypassHealthCheck: true });
-    expect(process.env.HTTPS_PROXY).toBe("http://corp-proxy:8080");
+
+    http.request({
+      hostname: "example.com",
+      path: "/api/data",
+      method: "GET",
+    });
+
+    expect(mockRequest).toHaveBeenCalledTimes(1);
+    const [options] = mockRequest.mock.calls[0] as any;
+    expect(options.hostname).toBe("example.com");
+    expect(options.protocol).toBeUndefined(); // Node defaults to http internally
+    expect(options.path).toBe("/api/data");
+    expect(options.headers?.["x-orchid-target-url"]).toBeUndefined();
   });
 
-  it("does not set HTTPS_PROXY when proxy is offline", async () => {
-    // Simulate offline: don't bypass health check and mock fetch to fail
-    const failFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
-    vi.stubGlobal("fetch", failFetch);
-    await init({ bypassHealthCheck: false });
-    expect(process.env.HTTPS_PROXY).toBeUndefined();
-  });
+  it("uninstall() deactivates http.request and https.request interception", async () => {
+    const mockHttpRequest = vi.spyOn(http, "request").mockReturnValue({} as any);
 
-  it("uninstall() removes HTTPS_PROXY it set but leaves pre-existing ones", async () => {
-    // init sets HTTPS_PROXY (was not set before)
     await init({ bypassHealthCheck: true });
-    expect(process.env.HTTPS_PROXY).toBe("http://127.0.0.1:4320");
+    
     uninstall();
-    // Should be gone — orchid-sdk owned it
-    expect(process.env.HTTPS_PROXY).toBeUndefined();
 
-    // Now test pre-existing: orchid-sdk must NOT delete it
-    process.env.HTTPS_PROXY = "http://corp-proxy:8080";
-    await init({ bypassHealthCheck: true });
-    uninstall();
-    expect(process.env.HTTPS_PROXY).toBe("http://corp-proxy:8080");
+    http.request({
+      hostname: "api.openai.com",
+      path: "/v1/chat/completions",
+      method: "POST",
+    });
+
+    expect(mockHttpRequest).toHaveBeenCalledTimes(1);
+    const [options] = mockHttpRequest.mock.calls[0] as any;
+    expect(options.hostname).toBe("api.openai.com");
+    expect(options.headers?.["x-orchid-target-url"]).toBeUndefined();
   });
 
   it("warns if pricing is empty on initialization", async () => {
