@@ -12,9 +12,29 @@ const LOCAL_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"];
 let patched = false;
 let offlineFallback = false;
 let originalFetch: typeof globalThis.fetch | undefined;
+/** Tracks env vars set by orchid-sdk so uninstall() only removes what it owned. */
+const ownedEnvVars = new Set<string>();
 
 function proxyUrl(): string {
   return process.env.ORCHID_PROXY_URL ?? "http://127.0.0.1:4320/v1";
+}
+
+/**
+ * Returns the proxy origin (scheme + host + port, no path) for use as
+ * HTTPS_PROXY / HTTP_PROXY. gaxios expects an origin-only URL.
+ * e.g. "http://127.0.0.1:4320/v1" → "http://127.0.0.1:4320"
+ */
+function proxyOrigin(): string {
+  const u = new URL(proxyUrl());
+  return `${u.protocol}//${u.host}`;
+}
+
+/** Sets an env var only if not already defined, and records ownership. */
+function setEnvIfAbsent(key: string, value: string): void {
+  if (!process.env[key]) {
+    process.env[key] = value;
+    ownedEnvVars.add(key);
+  }
 }
 
 function envList(name: string): string[] {
@@ -200,6 +220,34 @@ async function proxyIsHealthy(): Promise<boolean> {
   }
 }
 
+async function checkPricingSchema(): Promise<void> {
+  const baseFetch = originalFetch ?? globalThis.fetch;
+  try {
+    const headers = new Headers();
+    const apiKey = process.env.ORCHID_API_KEY;
+    if (apiKey) {
+      headers.set("X-Orchid-Api-Key", apiKey);
+    }
+    const signal = typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(1500)
+      : undefined;
+    const resp = await baseFetch(`${deriveQueryUrl()}/v1/pricing`, {
+      headers,
+      signal,
+    });
+    if (resp.status === 200) {
+      const data = await resp.json();
+      if (!data || Object.keys(data).length === 0) {
+        console.warn(
+          "[orchid] Warning: No pricing schema is configured on the Orchid proxy. All captured exchanges will have NULL cost."
+        );
+      }
+    }
+  } catch {
+    // Fail-safe: do not let diagnostics fail the startup path
+  }
+}
+
 export interface InitOptions {
   /** Skip the proxy health check (also enabled by ORCHID_BYPASS_HEALTHCHECK=True or under vitest). */
   bypassHealthCheck?: boolean;
@@ -233,15 +281,26 @@ export async function init(options: InitOptions = {}): Promise<void> {
 
   const bypass =
     options.bypassHealthCheck === true ||
-    process.env.ORCHID_BYPASS_HEALTHCHECK === "True" ||
-    process.env.VITEST !== undefined;
+    (options.bypassHealthCheck !== false &&
+      (process.env.ORCHID_BYPASS_HEALTHCHECK === "True" ||
+        process.env.VITEST !== undefined));
 
   if (!bypass) {
     offlineFallback = !(await proxyIsHealthy());
+    if (!offlineFallback) {
+      await checkPricingSchema();
+    }
   }
 
   if (!offlineFallback) {
     process.env.OPENAI_BASE_URL = proxy;
+    // Route gaxios (used by @langchain/google-vertexai) through the proxy.
+    // gaxios natively reads HTTPS_PROXY / HTTP_PROXY. We only set them if
+    // the caller hasn't already configured a proxy (e.g. a corporate proxy).
+    const origin = proxyOrigin();
+    setEnvIfAbsent("HTTPS_PROXY", origin);
+    setEnvIfAbsent("HTTP_PROXY", origin);
+    setEnvIfAbsent("NO_PROXY", "localhost,127.0.0.1");
   }
 
   if (!patched && !offlineFallback) {
@@ -258,5 +317,8 @@ export function uninstall(): void {
     originalFetch = undefined;
     patched = false;
   }
+  // Clean up only the env vars that orchid-sdk itself set.
+  for (const key of ownedEnvVars) delete process.env[key];
+  ownedEnvVars.clear();
   offlineFallback = false;
 }

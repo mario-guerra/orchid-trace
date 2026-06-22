@@ -19,6 +19,9 @@ const ENV_KEYS = [
   "ORCHID_CAPTURE_DOMAINS",
   "ORCHID_IGNORE_DOMAINS",
   "OPENAI_BASE_URL",
+  "HTTPS_PROXY",
+  "HTTP_PROXY",
+  "NO_PROXY",
 ];
 
 let savedEnv: Record<string, string | undefined>;
@@ -236,5 +239,91 @@ describe("init", () => {
     await expect(init({ bypassHealthCheck: true })).rejects.toThrow(
       /Malformed ORCHID_PROXY_URL/,
     );
+  });
+
+  it("sets HTTPS_PROXY and HTTP_PROXY to proxy origin (no path)", async () => {
+    await init({ bypassHealthCheck: true });
+    expect(process.env.HTTPS_PROXY).toBe("http://127.0.0.1:4320");
+    expect(process.env.HTTP_PROXY).toBe("http://127.0.0.1:4320");
+    expect(process.env.NO_PROXY).toBe("localhost,127.0.0.1");
+  });
+
+  it("strips /v1 path from ORCHID_PROXY_URL when setting HTTPS_PROXY", async () => {
+    process.env.ORCHID_PROXY_URL = "http://proxy.internal:9999/v1";
+    await init({ bypassHealthCheck: true });
+    expect(process.env.HTTPS_PROXY).toBe("http://proxy.internal:9999");
+    expect(process.env.HTTP_PROXY).toBe("http://proxy.internal:9999");
+  });
+
+  it("does not override a pre-existing HTTPS_PROXY", async () => {
+    process.env.HTTPS_PROXY = "http://corp-proxy:8080";
+    await init({ bypassHealthCheck: true });
+    expect(process.env.HTTPS_PROXY).toBe("http://corp-proxy:8080");
+  });
+
+  it("does not set HTTPS_PROXY when proxy is offline", async () => {
+    // Simulate offline: don't bypass health check and mock fetch to fail
+    const failFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    vi.stubGlobal("fetch", failFetch);
+    await init({ bypassHealthCheck: false });
+    expect(process.env.HTTPS_PROXY).toBeUndefined();
+  });
+
+  it("uninstall() removes HTTPS_PROXY it set but leaves pre-existing ones", async () => {
+    // init sets HTTPS_PROXY (was not set before)
+    await init({ bypassHealthCheck: true });
+    expect(process.env.HTTPS_PROXY).toBe("http://127.0.0.1:4320");
+    uninstall();
+    // Should be gone — orchid-sdk owned it
+    expect(process.env.HTTPS_PROXY).toBeUndefined();
+
+    // Now test pre-existing: orchid-sdk must NOT delete it
+    process.env.HTTPS_PROXY = "http://corp-proxy:8080";
+    await init({ bypassHealthCheck: true });
+    uninstall();
+    expect(process.env.HTTPS_PROXY).toBe("http://corp-proxy:8080");
+  });
+
+  it("warns if pricing is empty on initialization", async () => {
+    const mockFetch = vi.fn(async (input: FetchInput) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/health")) {
+        return new Response(JSON.stringify({ status: "ok" }), { status: 200 });
+      }
+      if (url.endsWith("/pricing")) {
+        return new Response(JSON.stringify({}), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", mockFetch);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await init({ bypassHealthCheck: false });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("No pricing schema is configured on the Orchid proxy")
+    );
+  });
+
+  it("does not warn if pricing contains entries", async () => {
+    const mockFetch = vi.fn(async (input: FetchInput) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/health")) {
+        return new Response(JSON.stringify({ status: "ok" }), { status: 200 });
+      }
+      if (url.endsWith("/pricing")) {
+        return new Response(
+          JSON.stringify({ openai: { "gpt-4o": { prompt: 5, completion: 15 } } }),
+          { status: 200 }
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", mockFetch);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await init({ bypassHealthCheck: false });
+
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
