@@ -231,8 +231,8 @@ Your assistant automatically discovers these tools once connected:
 * **`get_last_session`**: Instantly retrieve request/response payloads of only the single most recently recorded LLM exchange.
 * **`set_active_session`**: Set a global active session override for proxy recording (useful for black-box or E2E integration testing).
 * **`clear_active_session`**: Clear the global active session override, resuming default header-based session tracking.
-* **`clear_session_exchanges`**: Clear all recorded exchanges (traces) from a session without deleting the session itself.
-* **`delete_session`**: Permanently delete a session and all its associated exchanges from the SQLite database.
+* **`clear_session_exchanges`**: Clear all recorded exchanges (traces) from a session without deleting the session itself. Also available via the **Eraser** button in the web UI header when a session is open.
+* **`delete_session`**: Permanently delete a session and all its associated exchanges from the SQLite database. Also available via the **Trash** icon on each session row in the web UI dashboard, or from the header when a session is open.
 
 ### Job Triage & Metrics
 * **`list_jobs`**: List aggregated pipeline jobs recorded by the proxy.
