@@ -27,7 +27,7 @@ This repository contains the open-source Orchid SDKs and user documentation. The
 
 ## 🚀 Try the Interactive Demo
 
-Want to see Orchid in action without instrumenting your own app? Check out the **[Orchid LangGraph Demo](https://github.com/mario-guerra/langgraph_example/)**. 
+Want to see Orchid in action without modifying your own app? Check out the **[Orchid LangGraph Demo](https://github.com/mario-guerra/langgraph_example/)**. 
 
 This repository showcases a complex, multi-agent AI architecture (using OpenAI, Anthropic, and Google Vertex AI) natively hooked into Orchid. It includes a complete trace fixture, allowing you to execute the entire adversarial agent pipeline in **offline replay mode** with zero configuration—no API keys required and zero upstream cost. It's the absolute fastest way to experience deterministic AI testing and test-drive the visualizer dashboard.
 
