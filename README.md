@@ -1,8 +1,8 @@
 # Orchid — Record, Inspect, Replay AI Agents
 
-[Orchid Website](https://orchidtrace.xyz)
+[Orchid Website](https://orchidtrace.dev)
 
-**Stop grepping logs.** Orchid records your agent's network traffic — LLM calls, tool invocations, and any other API your agent talks to — through a zero-instrumentation proxy. Then it lets you:
+**Stop digging through logs.** Orchid runs in the background and automatically records every prompt, response, and tool call your AI app makes — without you having to write a single line of extra tracking code. Everything is saved securely in your own environment. Then it lets you:
 
 *   **Time-travel** through completed runs, step by step
 *   **Inspect** every prompt, response, and token count
@@ -17,15 +17,28 @@
 
 You choose how much to record: route only your LLM traffic through the proxy for lightweight inspection, or capture everything for the full picture. To **replay** a run with perfect fidelity, all of the agent's network traffic must go through the proxy — replay works by serving back the recorded responses, so anything that wasn't recorded can't be replayed.
 
-> **IMPORTANT NOTE - YOUR DATA _NEVER_ LEAVES YOUR INFRASTRUCTURE!** 
+> **IMPORTANT NOTE - YOUR DATA _NEVER_ LEAVES YOUR ENVIRONMENT!** 
 >
-> *   The proxy forwards requests **only** to the upstream APIs your app was already calling.
-> *   Everything recorded stays in a local SQLite database inside the container (or your mounted volume). No phone-home, no telemetry, no cloud backend.
+> *   Orchid forwards requests **only** to the upstream APIs your app was already calling.
+> *   Everything recorded stays saved securely inside your own network. No phone-home, no telemetry, no sending data to third-party dashboards.
 > *   Secrets are scrubbed in memory **before** anything is written to disk: `Authorization` headers are forwarded untouched to the upstream but never stored, and headers, query strings, and body fields with secret-like names (keys, tokens, passwords, credentials, cookies) are stored as `[REDACTED]`.
 > *   One honest caveat: redaction works by recognizing field *names* (like `api_key` or `authorization`), not by scanning the contents of your prompts. Prompt and completion text is recorded verbatim — that's the whole point of Orchid — so if a secret is pasted into a prompt, it will be stored along with the rest of the prompt text.
+> 
+> **Current scope:** Built for development, QA, and staging environments. SDKs fail-soft — if the proxy is unreachable, requests forward directly to the upstream provider with no error and no data loss.
 
+---
 
-This repository contains the open-source Orchid SDKs and user documentation. The `orchid-proxy` container is distributed via the GitHub Container Registry (see below). Content here is synced automatically from the main development repository — issues and discussions are welcome; pull requests may be ported rather than merged directly.
+## What's Open, What's Not
+
+| Component | License / Status | Where |
+|---|---|---|
+| Python SDK | Apache 2.0 (open source) | `sdk/python/` · [PyPI](https://pypi.org/project/orchid-sdk/) |
+| TypeScript SDK | Apache 2.0 (open source) | `sdk/typescript/` · [npm](https://www.npmjs.com/package/orchid-sdk) |
+| Documentation | Public | `docs/` |
+| Proxy container image | Free, no telemetry | [GHCR](https://ghcr.io/mario-guerra/orchid-proxy) |
+| Proxy source code | Closed | — |
+
+Content here is synced from the main development repository — issues and discussions are welcome; pull requests may be ported rather than merged directly.
 
 ---
 
@@ -52,6 +65,10 @@ flowchart LR
     upstream["Upstream APIs<br/>OpenAI, Anthropic,<br/>Gemini, tools, any API ..."]
     proxy -- "HTTPS<br/>(skipped in replay mode)" --> upstream
 ```
+
+### Where Orchid Fits
+
+Orchid is a **capture and replay layer**. It records exactly what your agents do and exposes that data as clean, local, queryable traces. Think of it as a **force multiplier for your existing toolchain**. By providing total visibility into every interaction, Orchid empowers the AI coding assistants and SRE platforms you already use to actively understand, optimize, and debug your applications.
 
 ### Non-Intrusive Interception (Thin SDK)
 
@@ -91,8 +108,8 @@ The proxy embeds a React-based dashboard on port `4321` — nothing extra to ins
   <img src="assets/web-visualizer-preview.svg" alt="Animated preview of the Orchid web visualizer: an exchange timeline on the left cycling through recorded LLM and tool calls, with the inspector on the right showing provider, status, latency, tokens, and syntax-highlighted JSON output for each exchange" width="880" />
 </p>
 
-### MCP Server for AI Assistants
-A built-in **MCP server** (SSE) lets AI assistants like Cursor, VS Code, or Claude Code query the recorded traffic directly: analyze prompt performance, pull token/cost statistics, or fetch payload examples as context for editing code.
+### Ask Your AI Assistant Why a Run Failed
+When a run fails, open your IDE and ask: *"Why did this run fail?"* Orchid exposes recorded traffic through a built-in MCP server — your coding assistant (Cursor, VS Code, Claude Code) can look up the exact prompts, responses, and tool calls from that run, then correlate them back to your source code. No print statements. No log spelunking.
 
 <p align="center">
   <img src="assets/mcp-workspace-preview.svg" alt="Animated preview of an IDE AI assistant debugging a RAG hallucination: the agent calls the Orchid MCP search_exchanges tool, inspects the recorded request payload, and discovers the vector DB injected the wrong document into the prompt context" width="720" />
@@ -329,16 +346,6 @@ Once you have pointed your application to the proxy and configured model pricing
 4. **Explore further**: Check out the guides on [session recording](docs/features/session_recording.md) and [replay testing](docs/features/replay_testing.md) to build automated regressions.
 
 ---
-
-## What's in this repository
-
-| Path | Contents |
-| --- | --- |
-| `sdk/python/` | Python instrumentation SDK ([PyPI](https://pypi.org/project/orchid-sdk/)) |
-| `sdk/typescript/` | TypeScript instrumentation SDK ([NPM](https://www.npmjs.com/package/orchid-sdk)) |
-| `docs/` | Deployment, setup, and integration guides |
-
-Additional language SDKs will be added under `sdk/` as they become available.
 
 ## License
 
