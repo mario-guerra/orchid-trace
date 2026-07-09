@@ -23,19 +23,18 @@ Pull the multi-arch container image from the GitHub Container Registry:
 docker pull ghcr.io/mario-guerra/orchid-proxy:latest
 ```
 
-*(Optional)* If you need to bind the proxy to a public network interface, you must secure it. Generate a secure, high-entropy global API key by running:
-
-```bash
-docker run --rm ghcr.io/mario-guerra/orchid-proxy:latest generate-api-key
-```
-
 ### Step 1: Start the Orchid Proxy
 
 Run the Orchid Proxy container using Docker, passing your generated key as the `ORCHID_API_KEY` environment variable. This secures the proxy instance endpoints, requiring clients to provide this key for all subsequent proxy and API access. This command also maps the proxy port (`4320`) and the query/web interface port (`4321`), and mounts a local volume to persist your SQLite database.
 
 
 ```bash
+# Step 1a: Generate and capture a secure key
+export ORCHID_API_KEY=$(docker run --rm ghcr.io/mario-guerra/orchid-proxy:latest generate-api-key)
+
+# Step 1b: Start the proxy, injecting the key
 docker run -d \
+  -e ORCHID_API_KEY=$ORCHID_API_KEY \
   -p 4320:4320 \
   -p 4321:4321 \
   -v orchid-data:/data \
@@ -44,9 +43,9 @@ docker run -d \
 ```
 
 > [!IMPORTANT]
-> **API Key is Mandatory in Docker**: The Orchid Proxy container binds to `0.0.0.0` (`ORCHID_BIND_HOST=0.0.0.0`) by default to receive external bridge network traffic. Because of this, setting `ORCHID_API_KEY` is **mandatory** when running the Docker image. If you start the container without a key, the proxy will crash-exit immediately on startup.
+> The Orchid Proxy container binds to `0.0.0.0` (`ORCHID_BIND_HOST=0.0.0.0`) by default when running in Docker. If you start the container without `ORCHID_API_KEY`, it will crash-exit on startup.
 >
-> **Exempt Public Routes**: The health check endpoint (`/health`) and the static visualizer web assets (HTML, JS, CSS) on the query port (`4321`) are exempt from authentication. This allows the visualizer UI to load in your browser, but it requires the key to load any session data (the screen will prompt you to enter the key). However, all actual proxy traffic (port `4320`) and data API endpoints (port `4321` under `/v1/*` and `/api/*`) are strictly auth-gated and require the key.
+> The health check endpoint (`/health`) and visualizer static assets on port `4321` are exempt from auth. Proxy traffic on `4320` and data APIs on `4321` require the key.
 
 ### Step 2: Install the Orchid SDK
 
@@ -88,7 +87,7 @@ await init();
 
 ## Connecting Your AI Assistant (MCP)
 
-Orchid embeds a Model Context Protocol (MCP) server that exposes its telemetry database to your agentic coding environments (like Cursor, VS Code, or Claude Code). This allows your AI coding assistant to query, search, and analyze recorded LLM traffic directly using natural language—enabling your coding agent to debug your AI application automatically.
+Orchid embeds a Model Context Protocol (MCP) server that exposes its telemetry database to your agentic coding environments (like Cursor, VS Code, or Claude Code). This allows your AI coding assistant to query, search, and analyze recorded LLM traffic directly using natural language, enabling your coding agent to debug your AI application automatically.
 
 To connect your IDE assistant:
 * For local development, configure your client to run the proxy container in interactive stdio mode with the `--mcp` flag.
@@ -100,10 +99,8 @@ See the [MCP Server Guide](./features/mcp_server.md) for full configuration step
 
 ## Next Steps
 
-Once your first run is recorded and your MCP client is connected, explore the other features:
-* **[Session Recording](./features/session_recording.md)**: Group and customize capture scopes.
-* **[Replay Testing](./features/replay_testing.md)**: Run integration tests completely offline with zero API cost.
-* **[Web Visualizer](./features/web_visualizer.md)**: Inspect latencies, token counts, and cost waterfall charts in your browser.
-* **[Configuration Reference](./configuration.md)**: Customize data retention limits and security settings.
+Once your first run is recorded and your MCP client is connected, continue with:
+* [Cloud Deployment Guide](./deployments/README.md)
+* [Feature Overview](./features/index.md)
 
 
