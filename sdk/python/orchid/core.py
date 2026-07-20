@@ -130,25 +130,29 @@ try:
         req_parsed = urllib.parse.urlparse(original_url)
         
         intercepted = _should_intercept(req_parsed)
-        if intercepted:
-            new_url_str = _rewrite_url(original_url, proxy_url)
+        if not intercepted:
+            _inject_headers(request.headers, request.url)
+            return _original_httpx_send(self, request, *args, **kwargs)
+
+        original_host = request.headers.get("host")
+        new_url_str = _rewrite_url(original_url, proxy_url)
+
+        try:
             request.url = httpx.URL(new_url_str)
             request.headers['host'] = urllib.parse.urlparse(proxy_url).netloc
             _inject_headers(request.headers, request.url, original_url_str=original_url)
-        else:
-            _inject_headers(request.headers, request.url)
-            
-        try:
             return _original_httpx_send(self, request, *args, **kwargs)
         except (httpx.ConnectError, httpx.ConnectTimeout) as e:
-            if intercepted:
-                import logging
-                logging.warning(f"Orchid Proxy connection failed: {e}. Falling back to direct routing: {original_url}")
-                request.url = httpx.URL(original_url)
-                request.headers['host'] = req_parsed.netloc
-                _purge_orchid_headers(request.headers)
-                return _original_httpx_send(self, request, *args, **kwargs)
-            raise
+            request.url = httpx.URL(original_url)
+            request.headers['host'] = original_host if original_host is not None else req_parsed.netloc
+            _purge_orchid_headers(request.headers)
+            import logging
+            logging.warning(f"Orchid Proxy connection failed: {e}. Falling back to direct routing: {original_url}")
+            return _original_httpx_send(self, request, *args, **kwargs)
+        finally:
+            request.url = httpx.URL(original_url)
+            request.headers['host'] = original_host if original_host is not None else req_parsed.netloc
+            _purge_orchid_headers(request.headers)
         
     async def _patched_httpx_async_send(self, request, *args, **kwargs):
         proxy_url = os.environ.get("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
@@ -156,25 +160,29 @@ try:
         req_parsed = urllib.parse.urlparse(original_url)
         
         intercepted = _should_intercept(req_parsed)
-        if intercepted:
-            new_url_str = _rewrite_url(original_url, proxy_url)
+        if not intercepted:
+            _inject_headers(request.headers, request.url)
+            return await _original_httpx_async_send(self, request, *args, **kwargs)
+
+        original_host = request.headers.get("host")
+        new_url_str = _rewrite_url(original_url, proxy_url)
+
+        try:
             request.url = httpx.URL(new_url_str)
             request.headers['host'] = urllib.parse.urlparse(proxy_url).netloc
             _inject_headers(request.headers, request.url, original_url_str=original_url)
-        else:
-            _inject_headers(request.headers, request.url)
-            
-        try:
             return await _original_httpx_async_send(self, request, *args, **kwargs)
         except (httpx.ConnectError, httpx.ConnectTimeout) as e:
-            if intercepted:
-                import logging
-                logging.warning(f"Orchid Proxy connection failed: {e}. Falling back to direct routing: {original_url}")
-                request.url = httpx.URL(original_url)
-                request.headers['host'] = req_parsed.netloc
-                _purge_orchid_headers(request.headers)
-                return await _original_httpx_async_send(self, request, *args, **kwargs)
-            raise
+            request.url = httpx.URL(original_url)
+            request.headers['host'] = original_host if original_host is not None else req_parsed.netloc
+            _purge_orchid_headers(request.headers)
+            import logging
+            logging.warning(f"Orchid Proxy connection failed: {e}. Falling back to direct routing: {original_url}")
+            return await _original_httpx_async_send(self, request, *args, **kwargs)
+        finally:
+            request.url = httpx.URL(original_url)
+            request.headers['host'] = original_host if original_host is not None else req_parsed.netloc
+            _purge_orchid_headers(request.headers)
         
     def patch_httpx():
         httpx.Client.send = _patched_httpx_send
@@ -188,10 +196,16 @@ try:
     _original_requests_request = requests.Session.request
     
     def _patched_requests_request(self, method, url, *args, **kwargs):
-        headers = kwargs.get("headers")
-        if headers is None:
+        caller_headers = kwargs.get("headers")
+        if isinstance(caller_headers, dict):
+            headers = dict(caller_headers)
+        elif isinstance(caller_headers, list):
+            headers = list(caller_headers)
+        elif caller_headers is None:
             headers = {}
-            kwargs["headers"] = headers
+        else:
+            headers = dict(caller_headers)
+        kwargs["headers"] = headers
             
         proxy_url = os.environ.get("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
         original_url = str(url)
@@ -247,10 +261,17 @@ try:
     
     async def _patched_aiohttp_request(self, method, str_or_url, *args, **kwargs):
         original_url = str(str_or_url)
-        headers = kwargs.get("headers")
-        if headers is None:
+        caller_headers = kwargs.get("headers")
+        if isinstance(caller_headers, dict):
+            headers = dict(caller_headers)
+        elif isinstance(caller_headers, list):
+            headers = list(caller_headers)
+        elif caller_headers is None:
             headers = {}
-            kwargs["headers"] = headers
+        else:
+            # CIMultiDict and similar Mapping types: convert to plain dict.
+            headers = dict(caller_headers)
+        kwargs["headers"] = headers
             
         proxy_url = os.environ.get("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
         url_parsed = urllib.parse.urlparse(original_url)

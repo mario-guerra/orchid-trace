@@ -264,3 +264,314 @@ def test_thread_contextvar_isolation(monkeypatch):
         thread_num = thread_name.split("-")[1]
         assert sess_id == f"session-{thread_num}"
 
+
+def test_httpx_clean_after_success(monkeypatch):
+    try:
+        import httpx
+    except ImportError:
+        pytest.skip("httpx not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    def dummy_send(self, request, *args, **kwargs):
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr(orchid.core, "_original_httpx_send", dummy_send)
+
+    client = httpx.Client()
+    req = httpx.Request("GET", "https://api.openai.com/v1/chat/completions", headers={"Authorization": "Bearer real-key"})
+    client.send(req)
+
+    assert str(req.url) == "https://api.openai.com/v1/chat/completions"
+    assert req.headers.get("host") == "api.openai.com"
+    assert req.headers.get("Authorization") == "Bearer real-key"
+    assert not any(k.lower().startswith("x-orchid-") for k in req.headers)
+
+
+def test_httpx_clean_after_fallback(monkeypatch):
+    try:
+        import httpx
+    except ImportError:
+        pytest.skip("httpx not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    calls = 0
+
+    def dummy_send(self, request, *args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise httpx.ConnectError("Proxy unreachable")
+        return httpx.Response(200, json={"fallback": True})
+
+    monkeypatch.setattr(orchid.core, "_original_httpx_send", dummy_send)
+
+    client = httpx.Client()
+    req = httpx.Request("GET", "https://api.openai.com/v1/chat/completions", headers={"Authorization": "Bearer real-key"})
+    resp = client.send(req)
+
+    assert resp.json() == {"fallback": True}
+    assert str(req.url) == "https://api.openai.com/v1/chat/completions"
+    assert req.headers.get("host") == "api.openai.com"
+    assert req.headers.get("Authorization") == "Bearer real-key"
+    assert not any(k.lower().startswith("x-orchid-") for k in req.headers)
+
+
+def test_httpx_clean_after_non_connection_exception(monkeypatch):
+    try:
+        import httpx
+    except ImportError:
+        pytest.skip("httpx not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    def dummy_send(self, request, *args, **kwargs):
+        raise httpx.ReadTimeout("Timeout")
+
+    monkeypatch.setattr(orchid.core, "_original_httpx_send", dummy_send)
+
+    client = httpx.Client()
+    req = httpx.Request("GET", "https://api.openai.com/v1/chat/completions")
+
+    with pytest.raises(httpx.ReadTimeout):
+        client.send(req)
+
+    assert str(req.url) == "https://api.openai.com/v1/chat/completions"
+    assert req.headers.get("host") == "api.openai.com"
+    assert not any(k.lower().startswith("x-orchid-") for k in req.headers)
+
+
+@pytest.mark.asyncio
+async def test_httpx_async_clean_after_success(monkeypatch):
+    try:
+        import httpx
+    except ImportError:
+        pytest.skip("httpx not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    async def dummy_async_send(self, request, *args, **kwargs):
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr(orchid.core, "_original_httpx_async_send", dummy_async_send)
+
+    async with httpx.AsyncClient() as client:
+        req = httpx.Request("GET", "https://api.openai.com/v1/chat/completions", headers={"Authorization": "Bearer real-key"})
+        await client.send(req)
+
+    assert str(req.url) == "https://api.openai.com/v1/chat/completions"
+    assert req.headers.get("host") == "api.openai.com"
+    assert req.headers.get("Authorization") == "Bearer real-key"
+    assert not any(k.lower().startswith("x-orchid-") for k in req.headers)
+
+
+def test_requests_headers_not_mutated(monkeypatch):
+    try:
+        import requests
+    except ImportError:
+        pytest.skip("requests not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    captured_headers = {}
+
+    def dummy_request(self, method, url, *args, **kwargs):
+        captured_headers.update(kwargs.get("headers", {}))
+        resp = requests.Response()
+        resp.status_code = 200
+        return resp
+
+    monkeypatch.setattr(orchid.core, "_original_requests_request", dummy_request)
+
+    session_obj = requests.Session()
+    headers = {"Authorization": "Bearer key"}
+    session_obj.request("GET", "https://api.openai.com/v1/chat/completions", headers=headers)
+
+    assert headers == {"Authorization": "Bearer key"}
+    assert captured_headers.get("X-Orchid-Api-Key") == "proxy-secret"
+
+
+@pytest.mark.asyncio
+async def test_aiohttp_headers_not_mutated(monkeypatch):
+    try:
+        import aiohttp
+    except ImportError:
+        pytest.skip("aiohttp not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    captured_headers = {}
+
+    async def dummy_request(self, method, str_or_url, *args, **kwargs):
+        captured_headers.update(kwargs.get("headers", {}))
+        class DummyResp:
+            async def __aenter__(self): return self
+            async def __aexit__(self, exc_type, exc_val, exc_tb): pass
+        return DummyResp()
+
+    monkeypatch.setattr(orchid.core, "_original_aiohttp_request", dummy_request)
+
+    async with aiohttp.ClientSession() as session_obj:
+        headers = {"Authorization": "Bearer key"}
+        await session_obj.get("https://api.openai.com/v1/chat/completions", headers=headers)
+
+    assert headers == {"Authorization": "Bearer key"}
+    assert captured_headers.get("X-Orchid-Api-Key") == "proxy-secret"
+
+
+def test_google_client_patch_finder_full_import_hook(monkeypatch):
+    import sys
+    import types
+    import importlib.util
+    import importlib.machinery
+    import orchid.core
+    from orchid.core import GoogleClientPatchFinder, init
+
+    monkeypatch.setenv("ORCHID_BYPASS_HEALTHCHECK", "True")
+
+    class DummyClient:
+        def __init__(self, *args, **kwargs):
+            self.transport = kwargs.get("transport")
+
+    mock_loader = types.SimpleNamespace()
+    def mock_exec_module(mod):
+        mod.PredictionServiceClient = DummyClient
+    mock_loader.exec_module = mock_exec_module
+
+    mock_spec = importlib.machinery.ModuleSpec(
+        name="google.cloud.aiplatform.v1",
+        loader=mock_loader
+    )
+
+    finder = GoogleClientPatchFinder()
+
+    def mock_find_spec(fullname, path=None, target=None):
+        if fullname.startswith("google.cloud.aiplatform"):
+            return mock_spec
+        return None
+
+    monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
+
+    spec = finder.find_spec("google.cloud.aiplatform.v1", None)
+    assert spec is not None
+    assert spec.loader is not None
+
+    test_mod = types.ModuleType("google.cloud.aiplatform.v1")
+    spec.loader.exec_module(test_mod)
+
+    c = test_mod.PredictionServiceClient()
+    assert c.transport == "rest"
+
+    c_grpc = test_mod.PredictionServiceClient(transport="grpc")
+    assert c_grpc.transport == "rest"
+
+
+def test_requests_case_insensitive_dict_headers(monkeypatch):
+    try:
+        import requests
+        from requests.structures import CaseInsensitiveDict
+    except ImportError:
+        pytest.skip("requests not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    captured_headers = {}
+
+    def dummy_request(self, method, url, *args, **kwargs):
+        captured_headers.update(kwargs.get("headers", {}))
+        resp = requests.Response()
+        resp.status_code = 200
+        return resp
+
+    monkeypatch.setattr(orchid.core, "_original_requests_request", dummy_request)
+
+    session_obj = requests.Session()
+    headers = CaseInsensitiveDict({"Authorization": "Bearer key", "Custom-Header": "val"})
+    session_obj.request("GET", "https://api.openai.com/v1/chat/completions", headers=headers)
+
+    assert isinstance(headers, CaseInsensitiveDict)
+    assert headers["Authorization"] == "Bearer key"
+    assert "X-Orchid-Api-Key" not in headers
+    assert captured_headers.get("X-Orchid-Api-Key") == "proxy-secret"
+
+
+@pytest.mark.asyncio
+async def test_aiohttp_cimultidict_headers(monkeypatch):
+    try:
+        import aiohttp
+        from multidict import CIMultiDict
+    except ImportError:
+        pytest.skip("aiohttp or multidict not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    captured_headers = {}
+
+    async def dummy_request(self, method, str_or_url, *args, **kwargs):
+        captured_headers.update(kwargs.get("headers", {}))
+        class DummyResp:
+            async def __aenter__(self): return self
+            async def __aexit__(self, exc_type, exc_val, exc_tb): pass
+        return DummyResp()
+
+    monkeypatch.setattr(orchid.core, "_original_aiohttp_request", dummy_request)
+
+    async with aiohttp.ClientSession() as session_obj:
+        headers = CIMultiDict({"Authorization": "Bearer key"})
+        await session_obj.get("https://api.openai.com/v1/chat/completions", headers=headers)
+
+    assert isinstance(headers, CIMultiDict)
+    assert headers["Authorization"] == "Bearer key"
+    assert "X-Orchid-Api-Key" not in headers
+    assert captured_headers.get("X-Orchid-Api-Key") == "proxy-secret"
+
+
+def test_httpx_stream_connection_failure_fallback(monkeypatch):
+    try:
+        import httpx
+    except ImportError:
+        pytest.skip("httpx not installed")
+
+    monkeypatch.setenv("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
+    monkeypatch.setenv("ORCHID_API_KEY", "proxy-secret")
+    init()
+
+    calls = 0
+
+    def dummy_send(self, request, *args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise httpx.ConnectError("Proxy unreachable")
+        return httpx.Response(200, json={"stream": "ok"})
+
+    monkeypatch.setattr(orchid.core, "_original_httpx_send", dummy_send)
+
+    client = httpx.Client()
+    req = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+
+    with client.stream("POST", "https://api.openai.com/v1/chat/completions") as response:
+        assert response.json() == {"stream": "ok"}
+
+    assert str(req.url) == "https://api.openai.com/v1/chat/completions"
+    assert not any(k.lower().startswith("x-orchid-") for k in req.headers)
+
+
+
