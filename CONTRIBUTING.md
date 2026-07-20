@@ -3,8 +3,14 @@
 Thanks for helping improve Orchid. This repository contains the public SDKs and
 documentation for Orchid's AI agent observability workflow.
 
-Content here is synced from the main development repository. Issues and
-discussions are welcome; pull requests may be ported rather than merged directly.
+Content here is synced from a private development repository. This means:
+
+- **Issues and discussions** are fully handled here.
+- **Pull requests** are reviewed here but merged into the private repo first, then
+  synced back. Your contribution will be credited. Expect some turnaround delay
+  between approval and the sync appearing on `main`.
+- **Proxy source code** is not open — contributions to proxy behavior should be filed
+  as issues describing the desired behavior change.
 
 ## Ways to Contribute
 
@@ -51,55 +57,65 @@ Clone the repository and work from the component you are changing.
 cd sdk/python
 python -m venv .venv
 . .venv/bin/activate
-python -m pip install -e .
-python -m pip install pytest pytest-asyncio requests aiohttp
+pip install -e .
+pip install pytest pytest-asyncio
 python -m pytest
 ```
 
-The Python package requires Python 3.8 or newer and depends on `httpx`.
+The Python package requires Python 3.8 or newer. `httpx` is installed automatically
+as a declared dependency. The test suite also exercises `requests` and `aiohttp`
+integrations if those packages are present; install them to run those tests:
+
+```bash
+pip install requests aiohttp
+```
 
 ### TypeScript SDK
+
+The TypeScript SDK uses [Vitest](https://vitest.dev/) as its test runner.
 
 ```bash
 cd sdk/typescript
 npm install
-npm test
-npm run typecheck
-npm run build
+npm run typecheck   # tsc --noEmit
+npm test            # vitest run
+npm run build       # produces dist/
 ```
 
 The TypeScript package requires Node.js 18 or newer.
 
 ### Proxy and Visualizer
 
-The proxy source is not part of this repository. Use the published container
-image when validating SDK behavior against a running proxy:
-
-```bash
-docker pull ghcr.io/mario-guerra/orchid-proxy:latest
-docker run -d \
-  --name orchid-proxy \
-  -p 4320:4320 \
-  -p 4321:4321 \
-  -v orchid-data:/data \
-  -e ORCHID_API_KEY=your-secure-api-key \
-  -e ORCHID_DB_PATH=/data/orchid.db \
-  ghcr.io/mario-guerra/orchid-proxy:latest
-```
+The proxy source is not part of this repository. Use the published container image
+when validating SDK behavior against a running proxy. Full setup instructions are in
+the [Quick Start section of the README](README.md#quick-start-run-the-orchid-proxy).
 
 Use placeholder keys in examples and tests. Never commit a real `ORCHID_API_KEY`
 or upstream provider credential.
+
+## CI
+
+Pull requests trigger automated checks on the SDK code in this repository:
+
+- **Python SDK**: `pytest` across the full test suite.
+- **TypeScript SDK**: `tsc --noEmit` (type check) + `vitest run` (tests).
+
+Make sure both pass locally before opening a PR. If CI is red on your PR and you
+cannot reproduce the failure locally, note this in the PR description.
 
 ## Testing Expectations
 
 - Add focused tests for SDK behavior changes.
 - Keep replay tests deterministic and offline by default.
-- Use `ORCHID_RECORD=1` only when intentionally refreshing fixtures from live
-  calls, then inspect fixtures before committing them.
-- Cover capture, replay, passthrough, and fail-soft behavior when a change
-  affects request routing or proxy availability.
-- For MCP-related changes, include the MCP tool output or manual verification
-  steps in the pull request.
+- Use `ORCHID_RECORD=1` only when intentionally refreshing fixtures from live calls,
+  then inspect the new files under `tests/fixtures/` before committing them.
+  `ORCHID_RECORD=1` puts the SDK in `capture` mode so the test run records live
+  responses; without it, the suite uses the committed fixtures and makes no outbound
+  calls.
+- Cover capture, replay, passthrough, and fail-soft behavior when a change affects
+  request routing or proxy availability.
+- For MCP-related changes, include the MCP tool output or manual verification steps
+  in the pull request.
 
 ## Code Style
 
@@ -129,18 +145,20 @@ same concept.
 
 ## Pull Request Process
 
-1. Confirm there is no open pull request already covering the issue.
+1. Check for an open issue or pull request already covering the change.
 2. Keep the PR focused on one change.
 3. Include tests or explain why the change is documentation-only.
 4. Update docs for user-facing behavior changes.
-5. Summarize validation commands and any manual proxy or MCP checks.
+5. Summarize validation commands and any manual proxy or MCP checks in the PR
+   description.
 6. Note if the change may need to be ported into the main development repository.
 
 ## Security
 
-Report security-sensitive issues privately when they involve credential exposure,
-proxy authentication bypass, replay fixture leakage, MCP access control, or
-secret redaction failures.
+Report security-sensitive issues — credential exposure, proxy authentication bypass,
+replay fixture leakage, MCP access control failures, or secret redaction bugs — using
+[GitHub's private vulnerability reporting](https://github.com/mario-guerra/orchid-trace/security/advisories/new)
+rather than a public issue.
 
 For public issues and pull requests:
 
