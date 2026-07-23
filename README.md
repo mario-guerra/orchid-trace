@@ -6,7 +6,7 @@
 
 *   **Time-travel** through completed runs, step by step
 *   **Inspect** every prompt, response, and token count
-*   **See** the cost of every LLM call, per session*
+*   **See** what every run, task, and step actually costs — the cost denominator for agent ROI*
 *   **Debug** failures in the built-in web UI or via MCP tools from your IDE
 *   **Replay** recorded runs offline — deterministic tests with zero API cost
 
@@ -68,7 +68,7 @@ flowchart LR
 
 ### Where Orchid Fits
 
-Orchid is a **capture and replay layer**. It records exactly what your agents do and exposes that data as clean, local, queryable traces. Think of it as a **force multiplier for your existing toolchain**. By providing total visibility into every interaction, Orchid empowers the AI coding assistants and SRE platforms you already use to actively understand, optimize, and debug your applications.
+Orchid is a **capture and replay layer** — a system of record for agent activity. It records exactly what your agents do and exposes that data as clean, local, queryable traces. Think of it as a **force multiplier for your existing toolchain**. By providing total visibility into every interaction, Orchid empowers the AI coding assistants and SRE platforms you already use to actively understand, optimize, and debug your applications.
 
 ### Non-Intrusive Interception (Thin SDK)
 
@@ -90,7 +90,7 @@ The proxy does not keep track of application state. It reads `X-Orchid-*` HTTP h
 Every captured LLM call (or "Exchange") records:
 *   **Request Metadata**: System prompts, user prompts, temperature, top-p, and custom tags.
 *   **Response Telemetry**: Complete completion text, usage tokens (input/output), and latency.
-*   **Cost Calculation**: Real-time USD cost attribution based on user-supplied model pricing maps (see [docs/configuration.md](docs/configuration.md) and the `/pricing` endpoint in [docs/api_reference.md](docs/api_reference.md)).
+*   **Cost Calculation**: Real-time USD cost attribution per session, task, and step, based on user-supplied model pricing maps — calculated at the wire, where it can't be instrumented wrong (see [docs/configuration.md](docs/configuration.md) and the `/pricing` endpoint in [docs/api_reference.md](docs/api_reference.md)).
 *   **Stream Reassembly**: For streaming completions, Orchid buffers SSE chunks in memory, serving them to the client instantly, and writes the fully reassembled completion body to SQLite.
 
 ### Deterministic Mock Replays
@@ -344,6 +344,12 @@ Once you have pointed your application to the proxy and configured model pricing
 2. **Open the visualizer**: Navigate to [http://localhost:4321](http://localhost:4321) in your browser. Enter your configured `ORCHID_API_KEY` when prompted to authorize and access the session dashboard.
 3. **Analyze and debug**: Inspect your traces in real-time, view detailed token cost breakdowns, or replay execution paths.
 4. **Explore further**: Check out the guides on [session recording](docs/features/session_recording.md) and [replay testing](docs/features/replay_testing.md) to build automated regressions.
+
+---
+
+## Working in a Regulated Environment?
+
+If you need a system of record for your agents — one you can answer an auditor or a CFO from — I'm working directly with a small number of design partners to shape what compliance-grade agent records look like. [Let's talk](https://orchidtrace.dev/contact).
 
 ---
 
