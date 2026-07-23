@@ -27,6 +27,11 @@ def _should_intercept(url_parsed):
         if any(i in host for i in ignores):
             return False
             
+    # In replay mode, intercept all non-ignored external hosts so the proxy can match them against the DB
+    mode = orchid_mode.get() or os.environ.get("ORCHID_MODE")
+    if mode == "replay":
+        return True
+
     # Check core LLM providers
     if any(h in host for h in ["api.openai.com", "api.anthropic.com", "generativelanguage.googleapis.com", "aiplatform.googleapis.com"]):
         return True
@@ -411,6 +416,15 @@ def init():
     """
     global _patched, _offline_fallback
     _offline_fallback = False  # Reset fallback flag on every init invocation to allow retry
+    
+    # Mock google auth default credentials to bypass client-side GCP validation in replay mode
+    if os.environ.get("ORCHID_MODE") == "replay":
+        try:
+            import google.auth
+            from google.auth.credentials import AnonymousCredentials
+            google.auth.default = lambda *args, **kwargs: (AnonymousCredentials(), "orchid-demo-project")
+        except ImportError:
+            pass
     
     proxy_url = os.environ.get("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
     

@@ -179,6 +179,10 @@ export function shouldIntercept(url: URL): boolean {
     return false;
   }
 
+  // In replay mode, intercept all non-ignored external hosts so the proxy can match them against the DB
+  const mode = currentMode() || process.env.ORCHID_MODE;
+  if (mode === "replay") return true;
+
   if (isCoreProvider(host)) return true;
 
   const capture = envList("ORCHID_CAPTURE_DOMAINS");
