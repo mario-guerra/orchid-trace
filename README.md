@@ -1,4 +1,4 @@
-# Orchid — Record, Inspect, Replay AI Agents
+# Orchid — Every Call Your Agents Make. Recorded. Replayable.
 
 [Orchid Website](https://orchidtrace.dev)
 
