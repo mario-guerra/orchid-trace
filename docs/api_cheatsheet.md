@@ -9,26 +9,26 @@ This cheat sheet provides ready-to-use `curl` commands for all Orchid Query API 
 ### List Sessions
 ```bash
 curl --noproxy "*" -X GET http://localhost:4321/api/sessions \
-  -H "Authorization: Bearer orchid_demo_8675309"
+  -H "Authorization: Bearer orchid_demo_8675309" | jq
 ```
 
 ### Get Session Summary
 Replace `<session_id>` with your target session.
 ```bash
 curl --noproxy "*" -X GET http://localhost:4321/api/sessions/<session_id> \
-  -H "Authorization: Bearer orchid_demo_8675309"
+  -H "Authorization: Bearer orchid_demo_8675309" | jq
 ```
 
 ### List Session Exchanges
 ```bash
 curl --noproxy "*" -X GET http://localhost:4321/api/sessions/<session_id>/exchanges \
-  -H "Authorization: Bearer orchid_demo_8675309"
+  -H "Authorization: Bearer orchid_demo_8675309" | jq
 ```
 
 ### Export Session
 ```bash
 curl --noproxy "*" -X GET http://localhost:4321/api/sessions/<session_id>/export \
-  -H "Authorization: Bearer orchid_demo_8675309" > exported_session.json
+  -H "Authorization: Bearer orchid_demo_8675309" | jq > exported_session.json
 ```
 
 ### Import Session
@@ -50,7 +50,7 @@ curl --noproxy "*" -X POST http://localhost:4321/api/sessions/import \
 ### Get Active Session Override
 ```bash
 curl --noproxy "*" -X GET http://localhost:4321/api/sessions/active \
-  -H "Authorization: Bearer orchid_demo_8675309"
+  -H "Authorization: Bearer orchid_demo_8675309" | jq
 ```
 
 ### Set Active Session Override
@@ -72,7 +72,7 @@ curl --noproxy "*" -X POST http://localhost:4321/api/sessions/clear \
 ### Get Active Pricing
 ```bash
 curl --noproxy "*" -X GET http://localhost:4321/api/pricing \
-  -H "Authorization: Bearer orchid_demo_8675309"
+  -H "Authorization: Bearer orchid_demo_8675309" | jq
 ```
 
 ### Update Pricing
@@ -94,13 +94,13 @@ curl --noproxy "*" -X POST http://localhost:4321/api/pricing/recompute \
 ### Get Global Stats
 ```bash
 curl --noproxy "*" -X GET http://localhost:4321/api/stats \
-  -H "Authorization: Bearer orchid_demo_8675309"
+  -H "Authorization: Bearer orchid_demo_8675309" | jq
 ```
 
 ### Check Proxy Health
 *(Auth bypasses for health checks, but included here for consistency)*
 ```bash
-curl --noproxy "*" -X GET http://localhost:4321/health
+curl --noproxy "*" -X GET http://localhost:4321/health | jq
 ```
 
 ## Model Context Protocol (MCP)
@@ -111,7 +111,7 @@ curl --noproxy "*" -X POST http://localhost:4321/api/mcp \
   -H "Authorization: Bearer orchid_demo_8675309" \
   -H "Content-Type: application/json" \
   -H "mcp-protocol-version: 2025-03-26" \
-  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}},"id":1}'
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}},"id":1}' | jq
 ```
 
 ### Terminate Streamable HTTP Session
