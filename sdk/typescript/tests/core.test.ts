@@ -372,4 +372,50 @@ describe("init", () => {
 
     expect(warnSpy).not.toHaveBeenCalled();
   });
+
+  it("patches google-auth-library in replay mode", async () => {
+    const mockOAuth2Client = class {
+      credentials: any = {};
+      async getRequestHeaders() { return {}; }
+      async getAccessToken() { return {}; }
+    };
+    const mockGoogleAuth = class {
+      async getClient() { return {}; }
+      async getCredentials() { return {}; }
+      async getProjectId() { return ""; }
+    };
+
+    vi.doMock("google-auth-library", () => ({
+      GoogleAuth: mockGoogleAuth,
+      OAuth2Client: mockOAuth2Client,
+    }));
+
+    process.env.ORCHID_MODE = "replay";
+    await init({ bypassHealthCheck: true });
+
+    // Verify prototype was patched
+    const auth = new mockGoogleAuth() as any;
+    const client = await auth.getClient();
+    expect(client).toBeInstanceOf(mockOAuth2Client);
+    expect(await client.getRequestHeaders()).toEqual({
+      Authorization: "Bearer orchid-replay-dummy-token",
+    });
+    expect(await client.getAccessToken()).toEqual({
+      token: "orchid-replay-dummy-token",
+    });
+    expect(await auth.getCredentials()).toEqual({
+      client_email: "orchid-replay-dummy@project.iam.gserviceaccount.com",
+      private_key: "dummy-key",
+    });
+    expect(await auth.getProjectId()).toBe("orchid-replay-project");
+
+    // Clean up
+    uninstall();
+    
+    // Verify restored
+    const restoredAuth = new mockGoogleAuth() as any;
+    expect(await restoredAuth.getClient()).toEqual({});
+    expect(await restoredAuth.getCredentials()).toEqual({});
+    expect(await restoredAuth.getProjectId()).toBe("");
+  });
 });

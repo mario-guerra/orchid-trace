@@ -420,9 +420,38 @@ def init():
     # Mock google auth default credentials to bypass client-side GCP validation in replay mode
     if os.environ.get("ORCHID_MODE") == "replay":
         try:
+            import google.auth.credentials
+
+            class _OrchidReplayCredentials(google.auth.credentials.Credentials):
+                """Dummy credentials that are always valid and never refresh.
+                
+                In replay mode, Orchid intercepts HTTP requests at the transport
+                layer, so real auth tokens are unnecessary. This class prevents
+                the Google Auth library from attempting any token refresh (which
+                would fail without real credentials and happens before Orchid's
+                HTTP patches can intercept the request).
+                """
+                def __init__(self):
+                    super().__init__()
+                    self.token = "orchid-replay-dummy-token"
+
+                @property
+                def valid(self):
+                    return True
+
+                @property
+                def expired(self):
+                    return False
+
+                def refresh(self, request):
+                    pass  # No-op: token never expires in replay mode
+
+                def before_request(self, request, method, url, headers):
+                    headers["Authorization"] = f"Bearer {self.token}"
+
             import google.auth
-            from google.auth.credentials import AnonymousCredentials
-            google.auth.default = lambda *args, **kwargs: (AnonymousCredentials(), "orchid-demo-project")
+            _orchid_dummy_creds = _OrchidReplayCredentials()
+            google.auth.default = lambda *args, **kwargs: (_orchid_dummy_creds, "orchid-replay-project")
         except ImportError:
             pass
     

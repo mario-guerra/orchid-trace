@@ -574,4 +574,53 @@ def test_httpx_stream_connection_failure_fallback(monkeypatch):
     assert not any(k.lower().startswith("x-orchid-") for k in req.headers)
 
 
+def test_google_auth_patch_in_replay_mode(monkeypatch):
+    import sys
+    import types
+
+    # Mock google.auth modules structure
+    mock_auth = types.ModuleType("google.auth")
+    mock_creds_mod = types.ModuleType("google.auth.credentials")
+
+    class DummyCredentials:
+        pass
+
+    mock_creds_mod.Credentials = DummyCredentials
+    mock_auth.credentials = mock_creds_mod
+
+    # Place mock modules in sys.modules so the imports succeed
+    google_mod = types.ModuleType("google")
+    monkeypatch.setitem(sys.modules, "google", google_mod)
+    monkeypatch.setitem(sys.modules, "google.auth", mock_auth)
+    monkeypatch.setitem(sys.modules, "google.auth.credentials", mock_creds_mod)
+
+    # Establish parent-child attributes for Python imports
+    google_mod.auth = mock_auth
+    mock_auth.credentials = mock_creds_mod
+
+    monkeypatch.setenv("ORCHID_MODE", "replay")
+    monkeypatch.setenv("ORCHID_BYPASS_HEALTHCHECK", "True")
+
+    from orchid.core import init
+    init()
+
+    # Verify google.auth.default was patched
+    assert hasattr(mock_auth, "default")
+    creds, project = mock_auth.default()
+
+    assert project == "orchid-replay-project"
+    assert creds.valid is True
+    assert creds.expired is False
+    assert creds.token == "orchid-replay-dummy-token"
+
+    # Verify refresh does not fail
+    creds.refresh(None)
+
+    # Verify headers are stamped
+    headers = {}
+    creds.before_request(None, None, None, headers)
+    assert headers["Authorization"] == "Bearer orchid-replay-dummy-token"
+
+
+
 

@@ -11,7 +11,7 @@ if os.path.exists(readme_path):
 
 setup(
     name="orchid-sdk",
-    version="0.3.4",
+    version="0.3.5",
     packages=find_packages(exclude=["tests", "tests.*"]),
     install_requires=[
         "httpx>=0.20.0",

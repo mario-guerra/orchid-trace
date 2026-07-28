@@ -18,6 +18,12 @@ let originalFetch: typeof globalThis.fetch | undefined;
 let originalHttpRequest: typeof http.request | undefined;
 let originalHttpsRequest: typeof https.request | undefined;
 
+let originalGetClient: any;
+let originalGetCredentials: any;
+let originalGetProjectId: any;
+let googleAuthLibraryPatched = false;
+let patchedGauth: any;
+
 /** Tracks env vars set by orchid-sdk so uninstall() only removes what it owned. */
 const ownedEnvVars = new Set<string>();
 
@@ -392,6 +398,51 @@ export async function init(options: InitOptions = {}): Promise<void> {
   // Reset fallback flag on every init invocation to allow retry
   offlineFallback = false;
 
+  // Mock google-auth-library default credentials in replay mode
+  if (process.env.ORCHID_MODE === "replay") {
+    try {
+      // @ts-ignore
+      const gauth = await import("google-auth-library");
+      if (!googleAuthLibraryPatched && gauth.GoogleAuth) {
+        originalGetClient = gauth.GoogleAuth.prototype.getClient;
+        originalGetCredentials = gauth.GoogleAuth.prototype.getCredentials;
+        originalGetProjectId = gauth.GoogleAuth.prototype.getProjectId;
+        patchedGauth = gauth;
+
+        class OrchidReplayClient extends gauth.OAuth2Client {
+          constructor() {
+            super();
+            this.credentials = { access_token: "orchid-replay-dummy-token" };
+          }
+          async getRequestHeaders(url?: string) {
+            return {
+              Authorization: "Bearer orchid-replay-dummy-token",
+            };
+          }
+          async getAccessToken() {
+            return { token: "orchid-replay-dummy-token" };
+          }
+        }
+
+        gauth.GoogleAuth.prototype.getClient = async function () {
+          return new OrchidReplayClient();
+        };
+        gauth.GoogleAuth.prototype.getCredentials = async function () {
+          return {
+            client_email: "orchid-replay-dummy@project.iam.gserviceaccount.com",
+            private_key: "dummy-key",
+          };
+        };
+        gauth.GoogleAuth.prototype.getProjectId = async function () {
+          return "orchid-replay-project";
+        };
+        googleAuthLibraryPatched = true;
+      }
+    } catch {
+      // Ignore if google-auth-library is not installed
+    }
+  }
+
   const proxy = proxyUrl();
   let parsed: URL;
   try {
@@ -440,4 +491,12 @@ export function uninstall(): void {
   for (const key of ownedEnvVars) delete process.env[key];
   ownedEnvVars.clear();
   offlineFallback = false;
+
+  if (googleAuthLibraryPatched && patchedGauth) {
+    patchedGauth.GoogleAuth.prototype.getClient = originalGetClient;
+    patchedGauth.GoogleAuth.prototype.getCredentials = originalGetCredentials;
+    patchedGauth.GoogleAuth.prototype.getProjectId = originalGetProjectId;
+    googleAuthLibraryPatched = false;
+    patchedGauth = undefined;
+  }
 }
