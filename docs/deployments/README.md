@@ -112,6 +112,8 @@ SSH into the VM, pull the newest image, and restart. Your database and key are u
 sudo sh -c 'cd /opt/orchid && docker compose pull && docker compose up -d'
 ```
 
+When an upgrade needs an Orchid SQLite schema migration, Orchid creates a consistent, one-time sibling backup before changing an existing database. For schema version 1, `/data/orchid.db` produces `/data/orchid.pre-schema-v1.bak`. The migration is additive, but downgrading to a binary that cannot read the newer schema is unsupported: stop Orchid and restore that pre-migration backup instead. Do not delete the backup until the upgraded release is accepted.
+
 ### Backups
 
 The entire recording history is one SQLite file at `/data/orchid.db`. The simplest backup is your provider's disk snapshot feature. To copy the file manually, stop the container first so you do not capture a mid-write state:
