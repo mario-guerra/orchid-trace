@@ -1,6 +1,11 @@
 # Configuration
 
-Configure Orchid using environment variables or command-line flags to customize proxy routing, security, and data retention.
+Configure the Docker/server version of Orchid using environment variables or command-line flags. These settings control routing, security, and data retention.
+
+> [!NOTE]
+> This page describes the Docker/server product. The macOS Desktop beta manages its own launch-scoped proxy and local database. Desktop users should follow the [Desktop public-beta guide](./desktop_public_beta.md).
+
+An environment variable is a named value supplied to a process when it starts. For example, `ORCHID_RETENTION_DAYS=7` tells Orchid to retain seven days of sessions. If both a command-line flag and its matching environment variable are set, use `orchid-proxy --help` to confirm the supported flag and expected value for the installed version.
 
 ## Proxy and Routing Settings
 

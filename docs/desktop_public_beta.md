@@ -1,115 +1,330 @@
-# Orchid Desktop public beta for macOS
+# Test the Orchid Desktop public beta on macOS
 
-Orchid Desktop records and replays supported AI-provider traffic from a command that Orchid launches. The public beta is intentionally narrow: Apple Silicon macOS and the exact application versions shown by `orchid profile list`.
+This guide walks through one complete test: install Orchid, capture a small Claude Code request, inspect it in the browser, replay it without another provider call, and remove Orchid's certificate trust.
 
-## Before installing
+No knowledge of proxies or certificates is required. Read each explanation before running its command.
 
-- Use an Apple Silicon Mac.
-- Download `Orchid-<version>-macos-arm64.zip` and its `.sha256` file from the GitHub prerelease.
-- Do not use Orchid with sensitive production traffic during the beta. Captured request and response data is stored locally.
-- Orchid does not provide system-wide capture, a same-user security boundary, HTTP/2 or gRPC interception, or certificate-pin bypass.
+> [!IMPORTANT]
+> Orchid Desktop is a narrow public beta. It supports Apple Silicon Macs and only the exact client versions listed by `orchid profile list`. Do not use sensitive production prompts during testing.
 
-## Verify and install
+## What Orchid does
 
-From the directory containing both downloaded files:
+Orchid launches a supported client with temporary network settings. Traffic from that launched process goes through a local proxy that:
+
+1. accepts connections only from the launch Orchid created;
+2. reads requests only for provider domains in Orchid's fixed registry;
+3. sends capture requests to the real provider and stores the response locally; and
+4. can later replay a matching response without contacting the provider.
+
+Orchid does **not** record every application on the Mac. Closing the launched command removes its temporary proxy context.
+
+## Before starting
+
+You need:
+
+- an Apple Silicon Mac (`arm64`);
+- the Orchid ZIP and matching `.sha256` file from the [GitHub Releases page](https://github.com/mario-guerra/orchid/releases);
+- a client and version shown by `orchid profile list`; and
+- working access to that client's AI provider.
+
+For the currently verified Claude Code profile, provider access can be either:
+
+- a Claude Pro or Max login; or
+- an Anthropic Console API key with API billing enabled, exported as `ANTHROPIC_API_KEY`.
+
+A provider key pays for live model requests. It is different from `ORCHID_API_KEY`, which protects a network-accessible Orchid server and is not needed by the local Desktop UI.
+
+## 1. Verify the download
+
+Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.5`; do not type the angle brackets.
 
 ```bash
+cd ~/Downloads
 shasum -a 256 -c Orchid-<version>-macos-arm64.zip.sha256
+```
+
+Expected result:
+
+```text
+Orchid-<version>-macos-arm64.zip: OK
+```
+
+`OK` means the ZIP matches the file published with the release. Stop if it says `FAILED`.
+
+Unzip the application:
+
+```bash
 unzip Orchid-<version>-macos-arm64.zip
 ```
 
-Move `Orchid.app` to `/Applications` using Finder, then verify Apple's signature and notarization assessment:
+Move `Orchid.app` into the **Applications** folder with Finder. If an older copy exists, quit it and replace it.
+
+## 2. Verify Apple's security checks
+
+Run both commands:
 
 ```bash
 codesign --verify --deep --strict --verbose=2 /Applications/Orchid.app
 spctl --assess --type execute --verbose=4 /Applications/Orchid.app
 ```
 
-For convenience, define the CLI path for the remaining examples:
+Expected results include:
+
+- `valid on disk` and `satisfies its Designated Requirement`; and
+- `accepted` with `source=Notarized Developer ID`.
+
+Stop if either command fails. Do not bypass a Gatekeeper warning for an unverified build.
+
+## 3. Set a shorter command name
+
+The executable is inside the application bundle. Define `ORCHID` once in each new terminal:
 
 ```bash
 ORCHID=/Applications/Orchid.app/Contents/MacOS/orchid
+```
+
+Confirm that the application starts:
+
+```bash
 "$ORCHID" --version
 "$ORCHID" doctor
 "$ORCHID" profile list
 ```
 
-Only applications and versions printed by `profile list` are supported beta profiles. Generic proxy compatibility is not a support claim.
+For release `0.1.5`, the version output starts with `orchid 0.1.5`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
 
-## Enable explicit TLS interception
+## 4. Create and trust Orchid's local certificate
 
-Orchid never changes trust settings without an explicit command and exact certificate fingerprint.
+### Why this is required
+
+HTTPS normally prevents an intermediary from reading a request. Orchid creates a private local certificate authority (CA) so the one client it launches can establish an encrypted connection to Orchid. Orchid then creates a separate encrypted connection to the real provider.
+
+Orchid creates the CA locally and never changes Keychain trust without an explicit confirmation.
+
+Create the CA and display its SHA-256 fingerprint:
 
 ```bash
 "$ORCHID" ca init
 "$ORCHID" ca status
 ```
 
-Copy the displayed SHA-256 fingerprint, preview the trust operation, and then approve that exact certificate:
+Copy the complete fingerprint from `ca status`. In the next commands, replace `<fingerprint>` with that value.
+
+First preview the change:
 
 ```bash
 "$ORCHID" ca trust <fingerprint>
+```
+
+Then explicitly approve it:
+
+```bash
 "$ORCHID" ca trust <fingerprint> --yes
+"$ORCHID" ca keychain-status <fingerprint>
 "$ORCHID" doctor
 ```
 
-This changes only the current user's login Keychain. Keep the fingerprint for removal.
+Expected result: `keychain-status` says the exact Orchid CA is present in the current user's login Keychain. Orchid does not install a system-wide certificate.
 
-## Capture a supported command
+Keep the fingerprint. It is required to remove the exact certificate later.
 
-Use a named session and launch the supported client through Orchid:
+## 5. Prepare the supported client
+
+Check the client version before spending money on a capture. For the verified Claude Code profile:
 
 ```bash
-"$ORCHID" run --session beta-example --mode capture --intercept-tls -- <supported-command> <arguments>
+/opt/homebrew/bin/claude --version
 ```
 
-The child receives temporary authenticated proxy and trust configuration. Orchid removes the launch context when the child exits. Other applications are not automatically routed through Orchid.
+Compare it with:
 
-Messages such as `destination-rejected (statsig.anthropic.com)` indicate that optional traffic outside Orchid's fixed provider registry was not intercepted. They do not by themselves indicate that the provider request failed.
+```bash
+"$ORCHID" profile list
+```
 
-## Inspect recordings
+If using Anthropic API billing, load the key into the current shell without placing it in shell history:
+
+```bash
+read -r -s ANTHROPIC_API_KEY
+echo
+export ANTHROPIC_API_KEY
+```
+
+The terminal waits silently after the first command. Paste the key and press Return. The key is not displayed.
+
+To load an existing trusted `.env` file instead, change to the directory containing it and run:
+
+```bash
+set -a
+source .env
+set +a
+```
+
+Only source a file that you created or reviewed because `source` executes shell commands in that file. Never commit a real provider key.
+
+## 6. Capture one live request
+
+Change to the project directory you want to use for both capture and replay. Replay matching can depend on the working directory and complete request shape.
+
+```bash
+cd /path/to/your/project
+```
+
+Run a small Claude Code request through Orchid:
+
+```bash
+printf '%s\n' 'Reply exactly: orchid.' |
+  "$ORCHID" run \
+    --session personal-beta-test \
+    --mode capture \
+    --intercept-tls \
+    -- /opt/homebrew/bin/claude -p \
+      --model haiku \
+      --tools '' \
+      --permission-mode dontAsk \
+      --output-format json
+```
+
+This is a real provider call and may incur a small charge. A successful result contains:
+
+```text
+"is_error":false
+"result":"orchid."
+```
+
+Orchid also prints `intercepted (api.anthropic.com)`. Messages about `destination-rejected (statsig.anthropic.com)` are expected: optional Anthropic telemetry is outside Orchid's fixed provider registry. Those messages do not mean the model request failed.
+
+## 7. Inspect the recording
+
+Start the local Desktop UI:
 
 ```bash
 "$ORCHID" ui
 ```
 
-The command starts the local authenticated UI and opens a one-use bootstrap URL. It does not require an Orchid API key in desktop mode. The default database is:
+Orchid opens a browser using a one-use authentication URL. The local Desktop UI does not ask for `ORCHID_API_KEY`.
+
+In the browser:
+
+1. select the `personal-beta-test` session;
+2. open the completed Anthropic exchange;
+3. confirm the HTTP status is `200`;
+4. inspect the request, response, duration, and token counts; and
+5. confirm secrets are redacted from recorded headers.
+
+Keep the terminal open while using the UI. Press **Control-C** in that terminal to stop it.
+
+Recordings are stored at:
 
 ```text
 ~/Library/Application Support/Orchid/orchid.db
 ```
 
-## Replay
+Treat this database as private because it can contain prompts and responses.
 
-Replay requires the same session, working directory, client version, and semantically equivalent request:
+## 8. Replay without another provider call
+
+Use the same directory, session name, prompt, client version, and command options used for capture:
 
 ```bash
-"$ORCHID" run --session beta-example --mode replay --intercept-tls -- <supported-command> <arguments>
+cd /path/to/your/project
+printf '%s\n' 'Reply exactly: orchid.' |
+  "$ORCHID" run \
+    --session personal-beta-test \
+    --mode replay \
+    --intercept-tls \
+    -- /opt/homebrew/bin/claude -p \
+      --model haiku \
+      --tools '' \
+      --permission-mode dontAsk \
+      --output-format json
 ```
 
-A replay hit does not contact the model provider. A replay miss fails closed unless `--replay-miss-fallback` is explicitly supplied.
+Expected result:
 
-## Pause, diagnose, and remove trust
+- the response is again `orchid.`;
+- provider usage and provider cost reported for this invocation are zero; and
+- there is no `Orchid Replay Miss` error.
+
+By default, a replay miss fails with HTTP 404 instead of contacting the provider. `--replay-miss-fallback` allows a miss to become a live paid request, so do not add it when testing offline replay.
+
+## 9. Pause or resume interception
+
+Pausing affects future launches. Existing processes keep the policy snapshot with which they started.
 
 ```bash
 "$ORCHID" policy pause
-"$ORCHID" doctor
-"$ORCHID" audit history
-"$ORCHID" ca untrust <fingerprint>
-"$ORCHID" ca untrust <fingerprint> --yes
+"$ORCHID" policy status
+"$ORCHID" policy resume
 ```
 
-After removing Keychain trust, delete `Orchid.app` from `/Applications` if Orchid is no longer needed. Local recordings and CA files remain under Orchid's Application Support directory so removal is not mistaken for data deletion.
+When paused, new launches use opaque HTTPS tunnels and are not captured or replayed.
 
-## Beta limitations
+## 10. Diagnose a problem
 
-- Apple Silicon only; Intel is not a supported target.
-- Compatibility is application- and version-specific.
-- Capture applies only to processes launched with `orchid run` that honor the supplied proxy and trust configuration.
+Start with these commands:
+
+```bash
+"$ORCHID" --version
+"$ORCHID" doctor
+"$ORCHID" profile list
+"$ORCHID" policy status
+"$ORCHID" audit history
+```
+
+See [Troubleshooting](./troubleshooting.md) for common errors. When reporting a beta issue, include the command outputs above, the client version, macOS version, and the redacted error message.
+
+Never include provider keys, Orchid proxy credentials, captured prompts, captured responses, or the database in an issue.
+
+## 11. Remove trust and uninstall
+
+Display the fingerprint again if needed:
+
+```bash
+"$ORCHID" ca status
+```
+
+Preview removal, then explicitly approve removal of that exact certificate:
+
+```bash
+"$ORCHID" ca untrust <fingerprint>
+"$ORCHID" ca untrust <fingerprint> --yes
+"$ORCHID" ca keychain-status <fingerprint>
+```
+
+Delete `Orchid.app` from **Applications** using Finder.
+
+Deleting the application does not delete recordings or CA files. They remain in:
+
+```text
+~/Library/Application Support/Orchid/
+```
+
+Review that directory before deleting it. Make sure no recordings need to be retained.
+
+## Test completion checklist
+
+A personal beta test is complete when all boxes are true:
+
+- [ ] The checksum reported `OK`.
+- [ ] `codesign` and Gatekeeper accepted the application.
+- [ ] `orchid doctor` completed successfully.
+- [ ] The client version exactly matched a listed profile.
+- [ ] The exact Orchid CA appeared in the login Keychain.
+- [ ] Capture returned the expected live model response.
+- [ ] The UI displayed the captured exchange.
+- [ ] Replay returned the same response without provider usage.
+- [ ] No provider key appeared in the UI or logs.
+- [ ] Certificate trust was removed when testing finished.
+
+## Public-beta limits
+
+- Apple Silicon only; Intel Macs are unsupported.
+- Compatibility is client- and version-specific.
+- Only processes launched by `orchid run` receive Orchid's proxy settings.
 - TLS interception is limited to source-reviewed provider hosts and HTTP/1.1 semantics.
-- Unknown or denied destinations are opaque or rejected according to policy; Orchid does not silently expand interception.
-- Certificate-pinned clients are unsupported.
-- Another process running as the same macOS user is outside Orchid's security boundary.
-- Captures are bounded and may be metadata-only when payload limits are exceeded.
-
-Report a beta issue with the output of `orchid --version`, `orchid doctor`, the supported-client version, and the redacted error. Never include provider keys, proxy credentials, captured prompts, or captured responses.
+- Orchid does not bypass certificate pinning.
+- HTTP/2, gRPC, and HTTP/3 interception are unsupported.
+- Unknown or denied destinations remain opaque or are rejected according to policy.
+- Other processes running as the same macOS user are outside Orchid's security boundary.
+- Captures are bounded and may become metadata-only when payload limits are exceeded.

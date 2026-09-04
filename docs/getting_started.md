@@ -1,9 +1,13 @@
-# Getting Started
+# Get started with Orchid in Docker
 
-## Overview
+This guide explains how to run Orchid as a Docker service and connect an application with an Orchid SDK. It assumes basic familiarity with a terminal, Docker, and environment variables, but no knowledge of proxy internals.
 
-Orchid (Orchestration Interactive Debugger) is a local-first, zero-instrumentation tool designed to record, inspect, and replay AI agent and LLM traffic. It acts as a lightweight intercepting proxy that captures all outgoing requests at the transport layer into a local SQLite database. It provides an embedded web visualizer for step-by-step telemetry analysis, and an embedded Model Context Protocol (MCP) server so that AI assistants (such as Cursor, VS Code, or Claude Code) can directly query and debug your agent's execution sequence in natural language.
+> [!NOTE]
+> Looking for the installable Mac application instead? Follow the [macOS Desktop public-beta guide](./desktop_public_beta.md). Desktop mode launches a supported client for you and does not use the Docker setup below.
 
+## What this setup does
+
+The Orchid proxy receives supported AI-provider requests from an instrumented application, forwards them to the provider, and records request and response details in SQLite. The Query API and browser visualizer let you inspect those recordings. The application still needs its normal provider credentials.
 
 ## Prerequisites
 

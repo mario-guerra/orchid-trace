@@ -2,7 +2,7 @@
 
 ## Overview
 
-Session Recording allows you to capture all outgoing LLM and external API requests from your AI agents at the transport layer. Captured exchanges are automatically scrubbed of sensitive keys, enriched with metadata (latency, token usage, and cost), and saved to a local SQLite database for offline analysis.
+Session Recording captures supported or explicitly configured LLM and API requests from an instrumented application. Orchid redacts recognized credential headers, records available metadata such as latency and token usage, and saves exchanges to a local SQLite database for inspection.
 
 ## Steps
 
@@ -52,6 +52,6 @@ Use these environment variables to control how sessions are recorded and process
 *   **What to do**: Ensure `import orchid` is the very first import in your application's entry point file. Verify that `OPENAI_BASE_URL` is explicitly set to point to the proxy address (`http://localhost:4320/v1`).
 
 ### Sensitive API keys are visible in recorded headers
-*   **Symptom**: Your raw API keys appear in the recorded headers within the database.
-*   **Why it happens**: The proxy's automatic scrubbing rules did not recognize a custom authorization header format.
-*   **What to do**: Ensure you are using standard authorization headers (e.g., `Authorization: Bearer <key>`). Standard headers are automatically scrubbed and replaced with redacted placeholders by the proxy.
+* **Symptom**: A raw API key appears in recorded headers.
+* **Why it happens**: The automatic redaction rules did not recognize a custom authorization header.
+* **What to do**: Stop using the capture for sensitive traffic and report the unrecognized header name without including its value. Standard headers such as `Authorization` and `X-Api-Key` should be replaced with redacted placeholders.
