@@ -247,21 +247,27 @@ Your assistant automatically discovers these tools once connected:
 * **`import_session`**: Import/seed a session fixture payload into the database.
 
 ### Cost & Pricing Configuration
-* **`get_pricing`**: Retrieve the currently active pricing definitions (provider -> model -> cost mappings). If no pricing is loaded, returns a structured template with `status: "no_pricing_configured"`, an `instructions` field, and a `template` object pre-populated with the distinct provider/model pairs observed in recorded traffic (zero values). Fill in the costs, serialize `template` to a JSON string, and pass it to `update_pricing`. Save the result locally to re-apply it on proxy restart.
-* **`update_pricing`**: Upload new pricing definitions to the proxy. Accepts a stringified JSON schema containing provider -> model -> cost mappings per million tokens. Pricing is stored in-memory only — restart clears it. Use `get_pricing` to retrieve and save your config locally for reuse.
+* **`get_pricing`**: Retrieve the active catalog, including its version and currency. Orchid starts with a bundled public-list-price snapshot. If an explicitly empty engine is used, this tool returns a versioned template populated from observed provider/model pairs.
+* **`update_pricing`**: Replace active pricing definitions in memory. The JSON must use exact model IDs and USD rates per million tokens. Use `--pricing-file` or `ORCHID_PRICING_FILE` to re-apply a custom catalog after restart.
   * *Example Pricing JSON Format:*
     ```json
     {
-      "openai": {
-        "gpt-5.5": { "prompt": 5.0, "completion": 15.0 },
-        "gpt-5-mini": { "prompt": 0.5, "completion": 1.5 }
-      },
-      "anthropic": {
-        "claude-4-6-sonnet": { "prompt": 3.0, "completion": 15.0 }
+      "version": "company-rates-2026-09-06",
+      "currency": "USD",
+      "providers": {
+        "openai": {
+          "gpt-4o": {
+            "prompt": 2.5,
+            "completion": 10.0,
+            "cache_read": 1.25
+          }
+        }
       }
     }
     ```
-* **`recompute_pricing`**: Recompute `cost_usd` for all stored exchanges using the currently active pricing definitions. Use after updating pricing to backfill costs on sessions recorded before pricing was loaded.
+* **`recompute_pricing`**: Price eligible non-final historical calls with the active catalog. Existing `final` costs keep their original pricing provenance.
+
+Per-call results include normalized provider usage, a fixed-point nanodollar value, the exact pricing model/version, and a certainty status. `final` means the provider usage was complete and all reported billable dimensions were represented; it is not a guarantee that the result equals the provider invoice.
 
 ---
 
@@ -302,7 +308,7 @@ Orchid Proxy configuration can be passed via command-line flags or environment v
 | `--query-port` | `ORCHID_QUERY_PORT` | Port for the query API and SSE endpoints. | `4321` |
 | `--api-key` | `ORCHID_API_KEY` | Global API Key for securing HTTP/SSE endpoints. | None |
 | `--db-path` | `ORCHID_DB_PATH` | Path to the SQLite database. | `~/.orchid/orchid.db` |
-| `--pricing-file` | `ORCHID_PRICING_FILE` | Path to a local JSON file containing pricing definitions. | None |
+| `--pricing-file` | `ORCHID_PRICING_FILE` | Path to a local versioned JSON pricing catalog that overrides the bundled catalog. | Bundled public-price catalog |
 | `--retention-days` | `ORCHID_RETENTION_DAYS` | Automatically delete sessions older than this many days (0 = disabled). | `30` |
 | `--max-db-mb` | `ORCHID_MAX_DB_MB` | Prune oldest sessions when database size exceeds this value in MB (0 = disabled). | `1024` |
 | `--default-provider` | `ORCHID_DEFAULT_PROVIDER` | Default upstream provider when no path prefix is used. | None |

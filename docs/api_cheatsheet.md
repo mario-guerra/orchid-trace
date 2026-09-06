@@ -159,7 +159,7 @@ Invoke-RestMethod -Uri "http://localhost:4321/api/pricing" `
 curl --noproxy "*" -X POST http://localhost:4321/api/pricing \
   -H "Authorization: Bearer orchid_demo_8675309" \
   -H "Content-Type: application/json" \
-  -d '{"openai": {"gpt-4o": {"prompt": 5.0, "completion": 15.0}}}'
+  -d '{"version":"company-rates-2026-09-06","currency":"USD","providers":{"openai":{"gpt-4o":{"prompt":2.5,"completion":10.0,"cache_read":1.25}}}}'
 ```
 **Windows (PowerShell)**
 ```powershell
@@ -167,7 +167,7 @@ Invoke-RestMethod -Uri "http://localhost:4321/api/pricing" `
   -Method POST `
   -Headers @{ "Authorization" = "Bearer orchid_demo_8675309" } `
   -ContentType "application/json" `
-  -Body '{"openai": {"gpt-4o": {"prompt": 5.0, "completion": 15.0}}}'
+  -Body '{"version":"company-rates-2026-09-06","currency":"USD","providers":{"openai":{"gpt-4o":{"prompt":2.5,"completion":10.0,"cache_read":1.25}}}}'
 ```
 
 ### Recompute Pricing

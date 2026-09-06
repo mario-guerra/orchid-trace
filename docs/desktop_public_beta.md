@@ -162,6 +162,18 @@ set +a
 
 Only source a file that you created or reviewed because `source` executes shell commands in that file. Never commit a real provider key.
 
+### Optional: set a personal session budget
+
+Set a positive dollar amount before `orchid run` to stop later captured requests once the session's known subtotal reaches that amount:
+
+```bash
+export ORCHID_SESSION_BUDGET_USD=0.05
+```
+
+Orchid checks the subtotal before each captured request. If a previous call has unknown cost, it blocks the next request with `409 Conflict` and `X-Orchid-Budget-Blocked: cost_unknown`. If the known subtotal has reached the limit, it returns `402 Payment Required` and `X-Orchid-Budget-Blocked: limit_reached`.
+
+This is a pre-request threshold, not a reservation: a request that starts below the limit can exceed it, and concurrent requests can jointly exceed it. It does not cap the provider invoice. Remove the setting with `unset ORCHID_SESSION_BUDGET_USD` when the test ends.
+
 ## 6. Capture one live request
 
 Change to the project directory you want to use for both capture and replay. Replay matching can depend on the working directory and complete request shape.

@@ -38,6 +38,12 @@ The macOS Desktop UI uses a one-use local bootstrap URL and does not require `OR
 * **Cause**: The provider rejected the Anthropic credential. This is not an Orchid API-key error.
 * **Fix**: Use a valid Claude subscription login or export an active Anthropic Console key as `ANTHROPIC_API_KEY`. API billing must be enabled for that key's workspace. Never send the key in an issue report.
 
+## Session budget blocks a request
+
+* **Symptom**: A captured request returns `409 Conflict` with `X-Orchid-Budget-Blocked: cost_unknown`, or `402 Payment Required` with `X-Orchid-Budget-Blocked: limit_reached`.
+* **Cause**: `ORCHID_SESSION_BUDGET_USD` or `--session-budget-usd` is set. The session either contains an earlier call whose cost cannot be determined, or its known subtotal has reached the configured amount.
+* **Fix**: Inspect the session in the UI or Query API. Add matching pricing or resolve the earlier usage before retrying `cost_unknown`; use a new session or raise/unset the positive budget setting for `limit_reached`. Do not assume the budget is an invoice-exact or concurrency-safe cap.
+
 ## Desktop reports `Orchid Replay Miss`
 
 * **Symptom**: Replay ends with HTTP 404 and `No matching recorded exchange found`.

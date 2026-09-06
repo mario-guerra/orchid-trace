@@ -39,6 +39,9 @@ An environment variable is a named value supplied to a process when it starts. F
 | `ORCHID_DB_PATH` | Path to the SQLite database file. | File path | `~/.orchid/orchid.db` | Optional |
 | `ORCHID_RETENTION_DAYS` | Delete sessions older than this many days (0 = keep forever). | Integer | `30` | Optional |
 | `ORCHID_MAX_DB_MB` | Prune oldest sessions when the database exceeds this size in MB (0 = unlimited). | Integer | `1024` | Optional |
+| `ORCHID_SESSION_BUDGET_USD` / `--session-budget-usd` | Block a new captured request after a session's known subtotal reaches this amount. An earlier unknown-cost call blocks later captured requests. | Finite number greater than `0` | Unset | Optional |
+
+`ORCHID_SESSION_BUDGET_USD` is a pre-request threshold, not a provider-invoice cap or a concurrency-safe reservation. A request that starts below the limit can exceed it, and simultaneous requests can jointly exceed it. Orchid returns `409 Conflict` with `X-Orchid-Budget-Blocked: cost_unknown` when a prior cost is unknown, or `402 Payment Required` with `X-Orchid-Budget-Blocked: limit_reached` when the known subtotal has reached the limit.
 
 ## Additional Configuration Variables
 

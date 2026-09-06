@@ -24,7 +24,7 @@ In local-only mode (where `ORCHID_API_KEY` is not set), authentication is bypass
 
 #### `GET /sessions/{session_id}`
 * **Description**: Get summary metadata for a specific session ID.
-* **Response**: A JSON object describing the session's overall stats.
+* **Response**: A JSON object describing the session's overall stats. `total_cost_usd` is the known-cost subtotal and `total_cost_usd_nanos` is its fixed-point form. Check `cost_status`: `final` means every call is final, `provisional` or `estimated` means every call has a numeric cost with lower certainty, `partial` means at least one call is unpriced, `unknown` means no call is priced, and `empty` means the session has no calls. `priced_exchanges` and `unknown_cost_exchanges` give the coverage.
 
 #### `GET /sessions/{session_id}/exchanges`
 * **Description**: Retrieve the chronological list of individual request/response exchanges recorded in the session.
@@ -67,17 +67,32 @@ In local-only mode (where `ORCHID_API_KEY` is not set), authentication is bypass
 ### 3. Pricing Configuration
 
 #### `GET /pricing`
-* **Description**: Inspect the active LLM provider model pricing map used for cost calculations.
-* **Response**: The loaded model prompt/completion pricing JSON.
+* **Description**: Inspect the active versioned, exact-model pricing catalog used for cost calculations.
+* **Response**: A document containing `version`, `currency`, and `providers`.
 
 #### `POST /pricing`
-* **Description**: Upload a new model pricing config JSON payload to override active pricing rates.
-* **Request Body**: A pricing map JSON payload.
+* **Description**: Replace active pricing rates. Rates are USD per one million tokens; model IDs match exactly (case-insensitive).
+* **Request Body**: A JSON document containing a non-empty `version`, `currency: "USD"`, and a `providers` map. Legacy unversioned maps remain accepted, but their results are marked `estimated_unversioned` rather than `final`.
 * **Response**: `200 OK` on success.
 
 #### `POST /pricing/recompute`
-* **Description**: Backfill cost calculations across historically recorded sessions in the database based on the active pricing map.
+* **Description**: Backfill eligible non-final historical calls using the active catalog. Existing `final` costs retain their original version.
 * **Response**: `200 OK` on success.
+
+Each exchange includes `cost_usd_nanos`, `cost_status`, `pricing_version`, `pricing_model`, `usage_source`, and normalized `usage_json`. `final` means complete provider-reported usage was fully priced by that catalog; it does not guarantee equality with a provider invoice.
+
+Clients may send `X-Orchid-Turn-Id` to attribute multiple provider calls to one stable application turn. Orchid stores it as `turn_id`, records `turn_source: "x-orchid-turn-id"`, and strips the control header before forwarding upstream. If the client does not provide a stable ID, both fields remain `null`; Orchid does not invent turn IDs from timestamps, sequence numbers, or provider response IDs.
+
+Tool analysis is recorded per exchange. `tool_definition_count` and `tool_definition_bytes` describe the request's top-level `tools` array. `tool_definition_tokens_estimated` is a rough size estimate of one token per four serialized JSON bytes, not provider-reported usage and not an invoice quantity. `tool_call_count` counts structured tool calls in complete, non-streaming Anthropic, OpenAI, and Gemini/Vertex responses; it is `null` when Orchid cannot determine a reliable count, including streaming responses.
+
+### Session budget responses
+
+When `ORCHID_SESSION_BUDGET_USD` or `--session-budget-usd` is set, Orchid checks the current session before forwarding a captured request. It returns either:
+
+- `409 Conflict`, `X-Orchid-Budget-Blocked: cost_unknown`, and `error.reason: "cost_unknown"` if a previous call has unknown cost; or
+- `402 Payment Required`, `X-Orchid-Budget-Blocked: limit_reached`, and `error.reason: "limit_reached"` if the known subtotal is at or above the configured limit.
+
+Both responses use `Content-Type: application/json` and contain `error.type: "session_budget"`, the configured `error.limit_usd`, and a message confirming that Orchid did not forward the request. This is a pre-request threshold, not a concurrency-safe reservation or an invoice-exact hard cap.
 
 ---
 
