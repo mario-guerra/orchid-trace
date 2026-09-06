@@ -5,7 +5,7 @@ This guide walks through one complete test: install Orchid, capture a small Clau
 No knowledge of proxies or certificates is required. Read each explanation before running its command.
 
 > [!IMPORTANT]
-> Orchid Desktop is a narrow public beta. It supports Apple Silicon Macs and only the exact client versions listed by `orchid profile list`. Do not use sensitive production prompts during testing.
+> Orchid Desktop is a narrow public beta for Apple Silicon M4-and-later Macs and only the exact client versions listed by `orchid profile list`. The beta was validated on one M4 Pro Mac running macOS 26.1; compatibility with other M4-and-later hardware or macOS versions is an assumption, not verified coverage. Do not use sensitive production prompts during testing.
 
 ## What Orchid does
 
@@ -22,7 +22,7 @@ Orchid does **not** record every application on the Mac. Closing the launched co
 
 You need:
 
-- an Apple Silicon Mac (`arm64`);
+- an Apple Silicon M4-or-later Mac (`arm64`);
 - the Orchid ZIP and matching `.sha256` file from the [GitHub Releases page](https://github.com/mario-guerra/orchid/releases);
 - a client and version shown by `orchid profile list`; and
 - working access to that client's AI provider.
@@ -331,7 +331,7 @@ A personal beta test is complete when all boxes are true:
 
 ## Public-beta limits
 
-- Apple Silicon only; Intel Macs are unsupported.
+- Apple Silicon M4 and later only; Intel Macs are unsupported. One M4 Pro on macOS 26.1 was validated; other M4-and-later hardware and macOS versions are assumed compatible but unverified.
 - Compatibility is client- and version-specific.
 - Only processes launched by `orchid run` receive Orchid's proxy settings.
 - TLS interception is limited to source-reviewed provider hosts and HTTP/1.1 semantics.
