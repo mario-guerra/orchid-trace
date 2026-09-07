@@ -36,14 +36,29 @@ In local-only mode (where `ORCHID_API_KEY` is not set), authentication is bypass
 
 Legacy rows migrate additively with `downstream_http_version: "unknown_legacy"`, `capture_format_version: 1`, `replayable: false`, and `replayability_reason: "legacy_format"`. They remain available for inspection and export but do not participate in the version 2 replay contract. New replay lookup identity includes session, provider or exact hostname, HTTP method, request path, and semantic hash.
 
+#### `POST /sessions/{session_id}/realtime`
+* **Description**: Append an ordered batch of protocol-neutral realtime events and create or update its stream. Intended for Orchid transports and cooperative SDK instrumentation.
+* **Request Body**: A `stream` object plus up to 256 `events`. The path session ID must equal `stream.session_id`. Events carry a stable ID, strictly increasing sequence number, nondecreasing microsecond offset, direction, event type, JSON flags, optional content type, `utf8` or `base64` payload, truncation state, and recording timestamp. Exact event retries are idempotent; reusing an event ID or stream sequence number with different content is rejected. Stream provider/exchange attribution may be filled when absent but cannot be replaced, and `closed`/`failed` lifecycle states and an existing `ended_at` cannot regress on stale retries. Eventless lifecycle updates remain valid.
+* **Browser CORS**: Cross-origin access is disabled unless an exact origin is configured with `--realtime-cors-origins` or `ORCHID_REALTIME_CORS_ORIGINS`. Allowed preflight requests are limited to `POST`, `Content-Type`, and `X-Orchid-Api-Key`; credentialed CORS and wildcards are not enabled. Same-origin requests are unaffected.
+* **Limits**: 1 MiB decoded payload per event, 8 MiB decoded payload per batch, 10,000 events and 64 MiB of event payload per stream, 100,000 events, 64 MiB of decoded payload, 32 MiB of stored event/metadata text, and 1,024 realtime streams per session, and 12 MiB per HTTP request. The session-wide event and storage bounds keep fixture export memory bounded.
+* **Response**: `201 Created` on success, `400 Bad Request` for invalid data or ordering, and `413 Payload Too Large` when the HTTP request limit is exceeded.
+
+#### `GET /sessions/{session_id}/realtime`
+* **Description**: List realtime streams for a session in deterministic start-time and ID order.
+* **Response**: A JSON array containing protocol, provider, target, lifecycle state, replay capability, replayability reason, and metadata for each stream.
+
+#### `GET /sessions/{session_id}/realtime/{stream_id}/events`
+* **Description**: List a stream's events in sequence order. The stream must belong to the session in the path.
+* **Response**: A JSON array on success or `404 Not Found` when ownership does not match.
+
 #### `GET /sessions/{session_id}/export`
-* **Description**: Export a session and all its captured exchanges as a portable JSON fixture file.
-* **Response**: The complete serialized JSON fixture.
+* **Description**: Export a session, its captured exchanges, and its realtime transcripts as a portable JSON fixture file.
+* **Response**: The complete serialized JSON fixture. Older fixtures without `realtime_transcripts` remain import-compatible.
 
 #### `POST /sessions/import`
 * **Description**: Seed a session fixture file payload back into the SQLite database.
-* **Request Body**: The raw serialized JSON fixture to import.
-* **Response**: `200 OK` on success.
+* **Request Body**: The raw serialized JSON fixture to import, up to 256 MiB. Re-import replaces matching realtime stream transcripts transactionally.
+* **Response**: `201 Created` on success.
 
 ---
 

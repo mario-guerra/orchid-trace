@@ -140,6 +140,31 @@ The SDK is built to be resilient. During initialization, the SDK performs a fast
 
 ---
 
+## Browser WebRTC observability
+
+Use the browser-safe `orchid-sdk/realtime` entry point to cooperatively observe a peer connection and batch events to the Query API. Configuration is explicit; this module does not read Node environment variables or import Node APIs.
+
+```ts
+import { WebRTCObserver } from "orchid-sdk/realtime";
+
+const observer = new WebRTCObserver({
+  peerConnection,
+  queryUrl: "https://orchid.example.test",
+  apiKey: orchidBrowserToken,
+  sessionId: "voice-session-42",
+  target: "support-agent",
+});
+
+observer.recordTranscript("user", "Can you check my order?", { final: true });
+observer.recordToolEvent("lookup_order", "start", { orderId: "123" });
+observer.recordTiming("first_audio", 342);
+await observer.stop();
+```
+
+The observer records signaling and connection lifecycle, ICE state, privacy-reduced selected candidate-pair/TURN details, RTP counter summaries, transcript/tool/timing/error events, and up to 16 bounded artifact references. It excludes SDP, candidate addresses, and media samples. Raw audio and binary payloads are rejected by default; `allowRawAudio: true` is an explicit opt-in. Queues, batches, transcript text, RTP rows, and artifact references are bounded. Call `flush()` or `stop()` before page teardown when delivery is required.
+
+---
+
 ## Development
 
 ```bash

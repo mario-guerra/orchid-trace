@@ -1,6 +1,6 @@
 {
   "name": "orchid-sdk",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Thin TypeScript SDK for Orchid — the Orchestration Interactive Debugger. Routes outbound LLM requests through the local Orchid Proxy for capture, replay, and interactive debugging.",
   "author": "Orchid Team <team@orchid.dev>",
   "repository": {
@@ -23,13 +23,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./realtime": {
+      "types": "./dist/realtime.d.ts",
+      "import": "./dist/realtime.js",
+      "require": "./dist/realtime.cjs"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts src/realtime.ts --format esm,cjs --dts --clean",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
