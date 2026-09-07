@@ -12,7 +12,7 @@ No knowledge of proxies or certificates is required. Read each explanation befor
 Orchid launches a supported client with temporary network settings. Traffic from that launched process goes through a local proxy that:
 
 1. accepts connections only from the launch Orchid created;
-2. reads requests only for provider domains in Orchid's fixed registry;
+2. reads requests only for Orchid's built-in provider hosts or exact DNS hosts you explicitly enroll;
 3. sends capture requests to the real provider and stores the response locally; and
 4. can later replay a matching response without contacting the provider.
 
@@ -174,6 +174,19 @@ Orchid checks the subtotal before each captured request. If a previous call has 
 
 This is a pre-request threshold, not a reservation: a request that starts below the limit can exceed it, and concurrent requests can jointly exceed it. It does not cap the provider invoice. Remove the setting with `unset ORCHID_SESSION_BUDGET_USD` when the test ends.
 
+### Optional: enroll another exact host
+
+The built-in exact hosts are `api.openai.com`, `api.anthropic.com`, and the direct Gemini Developer API host `generativelanguage.googleapis.com`. They seed new and legacy policies by default. A policy that already contains an explicit enrollment list remains unchanged, so add the Gemini host manually if it is absent. To capture another HTTPS API, enroll its exact DNS host before starting the child process:
+
+```bash
+"$ORCHID" interception add api.example.com
+"$ORCHID" interception list
+```
+
+Enrollment accepts exact public DNS names only—never wildcards, IP literals, single-label names, or `.local` names. DNS is checked on every connection, and the entire connection is rejected if any answer is private or otherwise non-public. `interception remove api.example.com` restores opaque tunneling for future launches. `policy deny` temporarily disables an enrolled host; policy changes never alter an already-running launch.
+
+A legacy policy file without an enrollment list starts with the built-in provider hosts. Its first policy update writes an explicit sorted list. An explicitly empty list stays empty.
+
 ## 6. Capture one live request
 
 Change to the project directory you want to use for both capture and replay. Replay matching can depend on the working directory and complete request shape.
@@ -204,7 +217,7 @@ This is a real provider call and may incur a small charge. A successful result c
 "result":"orchid."
 ```
 
-Orchid also prints `intercepted (api.anthropic.com)`. Messages about `destination-rejected (statsig.anthropic.com)` are expected: optional Anthropic telemetry is outside Orchid's fixed provider registry. Those messages do not mean the model request failed.
+Orchid also prints `intercepted (api.anthropic.com)`. Unenrolled hosts use opaque CONNECT tunnels and are not recorded. A `destination-rejected` message instead means the connection failed Orchid's port, authority, or public-address checks.
 
 ## 7. Inspect the recording
 
@@ -329,14 +342,29 @@ A personal beta test is complete when all boxes are true:
 - [ ] No provider key appeared in the UI or logs.
 - [ ] Certificate trust was removed when testing finished.
 
+## Protocol and capability matrix
+
+| Traffic from an enrolled host | Forwarding and capture | Semantic decoding | Replay |
+| --- | --- | --- | --- |
+| HTTP/1.1 | Supported | Provider adapter when available; otherwise generic request/response data | Supported only for complete, bounded, replayable captures |
+| HTTP/2 | Supported after TLS ALPN | Same as HTTP/1.1 | Same request-level constraints as HTTP/1.1 |
+| Server-Sent Events | Forwarded live | Provider-specific; unknown providers retain the UTF-8 event stream without claiming semantic decoding | Supported only when the stream completes within the capture limit |
+| gRPC | Rejected with `501` | Unsupported | Unsupported |
+| WebSocket Upgrade or tunneled CONNECT | Rejected with `501` | Unsupported | Unsupported |
+| HTTP/3 and QUIC | Not intercepted by this TCP CONNECT proxy | Unsupported | Unsupported |
+
+HTTP/2 is terminated by Orchid and independently negotiated upstream. Capture is request-level translation, not preservation of HTTP/2 frames, stream IDs, priorities, or wire framing. Remove a host from enrollment when gRPC or WebSocket traffic needs an opaque tunnel.
+
+Built-in semantic decoding covers OpenAI Chat Completions and Responses API paths, Anthropic Messages, and direct Gemini Developer API `/v1/models/...` and `/v1beta/models/...` paths on `generativelanguage.googleapis.com`. Other enrolled hosts use generic capture; enrollment alone does not add provider-specific decoding.
+
+Replay identity includes session, provider or exact hostname, method, path, and semantic request hash. Existing captures use the legacy format and are retained for inspection but are not silently reused by the new replay contract. Metadata-only logging, multipart requests, declared trailer-dependent traffic, incomplete streams, and request or response bodies over the capture limit are explicitly marked unreplayable; replay returns `422` with `X-Orchid-Replay-Unsupported` unless live fallback was explicitly enabled. HTTP/2 trailers that were not declared in headers cannot be identified by the current data-stream forwarding path, so Orchid cannot guarantee trailer-aware capture or replay.
+
 ## Public-beta limits
 
 - Apple Silicon M4 and later only; Intel Macs are unsupported. One M4 Pro on macOS 26.1 was validated; other M4-and-later hardware and macOS versions are assumed compatible but unverified.
-- Compatibility is client- and version-specific.
-- Only processes launched by `orchid run` receive Orchid's proxy settings.
-- TLS interception is limited to source-reviewed provider hosts and HTTP/1.1 semantics.
-- Orchid does not bypass certificate pinning.
-- HTTP/2, gRPC, and HTTP/3 interception are unsupported.
+- Compatibility remains client- and version-specific.
+- Only processes launched by `orchid run` receive proxy environment variables. Direct sockets, custom transports, clients that ignore those variables, and QUIC can bypass Orchid; universal capture is not guaranteed.
+- Orchid cannot and does not bypass certificate pinning. A pinned client rejects Orchid's generated leaf certificate.
 - Unknown or denied destinations remain opaque or are rejected according to policy.
 - Other processes running as the same macOS user are outside Orchid's security boundary.
-- Captures are bounded and may become metadata-only when payload limits are exceeded.
+- Captures are bounded and may become metadata-only and explicitly unreplayable when payload limits are exceeded.

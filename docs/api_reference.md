@@ -28,7 +28,13 @@ In local-only mode (where `ORCHID_API_KEY` is not set), authentication is bypass
 
 #### `GET /sessions/{session_id}/exchanges`
 * **Description**: Retrieve the chronological list of individual request/response exchanges recorded in the session.
-* **Response**: A JSON array of exchange objects.
+* **Response**: A JSON array of exchange objects. New captures include:
+  * `downstream_http_version`: the client-side request protocol, such as `HTTP/1.1` or `HTTP/2`;
+  * `capture_format_version`: the recording/replay contract version;
+  * `replayable`: whether Orchid can safely replay the stored exchange; and
+  * `replayability_reason`: `null` when replayable, otherwise a stable reason such as `capture_limit_exceeded`, `multipart_request`, `request_trailers`, `response_trailers`, `incomplete_stream`, or `metadata_only_mode`.
+
+Legacy rows migrate additively with `downstream_http_version: "unknown_legacy"`, `capture_format_version: 1`, `replayable: false`, and `replayability_reason: "legacy_format"`. They remain available for inspection and export but do not participate in the version 2 replay contract. New replay lookup identity includes session, provider or exact hostname, HTTP method, request path, and semantic hash.
 
 #### `GET /sessions/{session_id}/export`
 * **Description**: Export a session and all its captured exchanges as a portable JSON fixture file.
