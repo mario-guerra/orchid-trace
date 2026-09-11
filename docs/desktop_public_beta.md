@@ -1,6 +1,6 @@
 # Test the Orchid Desktop public beta on macOS
 
-This guide walks through one complete test: install Orchid, capture a small Claude Code request, inspect it in the browser, replay it without another provider call, and remove Orchid's certificate trust.
+This guide walks through one complete test: install Orchid, capture a small custom-agent or verified Claude Code request, inspect it locally, replay it without another provider call, and remove Orchid's certificate trust.
 
 No knowledge of proxies or certificates is required. Read each explanation before running its command.
 
@@ -36,7 +36,7 @@ A provider key pays for live model requests. It is different from `ORCHID_API_KE
 
 ## 1. Verify the download
 
-Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.12`; do not type the angle brackets.
+Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.13`; do not type the angle brackets.
 
 ```bash
 cd ~/Downloads
@@ -77,16 +77,16 @@ Stop if either command fails. Do not bypass a Gatekeeper warning for an unverifi
 
 ## 3. Run the Desktop UI qualification
 
-Open **Orchid** from Applications. The primary flow requires no setup or startup commands:
+Open **Orchid** from Applications. Verified clients launch directly; custom agents start from an Orchid-owned terminal so the user—not the renderer—enters the command:
 
 1. In **Settings**, choose **Prepare local CA**. Confirm that the displayed SHA-256 fingerprint contains no private-key material.
 2. Choose **Review login-Keychain trust**, then approve the native dialog. The dialog must name the exact fingerprint, operation, and current-user login-Keychain scope.
-3. Return to **Home**, choose a project with the native folder picker, optionally enter a session name and known-cost guard, and select **Launch Claude Code** only after every preflight item says Ready.
+3. Return to **Home**, choose **My own agent or CLI** or **Verified Claude Code**, select a project with the native folder picker, and optionally enter a session name and known-cost guard. For a custom agent, approve the unverified terminal boundary, select **Open agent terminal**, and enter the project's normal start command in that terminal.
 4. Verify the terminal receives keyboard input, resizes with the window, and returns focus to the controls with Control-Option-O. Confirm that capture is described as limited to the launched process tree.
 5. Submit one harmless prompt, open **Inspector**, and confirm the captured exchange appears. Stop the session and verify the UI reports cleanup rather than only process exit.
 6. In **History**, open the capture in Inspector. Then select **Replay** on Home, choose that immutable source, leave miss fallback off, and launch a distinct run. A replay miss must fail locally; enabling fallback may contact the provider and records any miss in the new run.
 7. In **Settings**, export redacted diagnostics to a new file. Confirm it contains build/platform, database-health schema, and lifecycle audit metadata but no prompt, response, terminal text, credentials, private key, or project path.
-8. Optionally enable **Advanced: unverified custom terminal**. Confirm it is clearly unverified, accepts no startup command, and launches only the approved login shell in the selected project. Disable it after testing.
+8. For a custom agent, confirm child processes using Anthropic, OpenAI, and Vertex REST remain within the launched process tree and appear in the same capture. gRPC traffic is inspect-only and detached descendants are outside guaranteed cleanup.
 9. Test keyboard-only operation and 200% zoom. If VoiceOver is available, verify controls have useful names and terminal output is not announced line by line.
 10. Review trust removal in Settings and cancel the native confirmation once to verify no mutation. Approve it only when the test is complete.
 
@@ -110,13 +110,13 @@ Confirm that the application starts:
 "$ORCHID" profile list
 ```
 
-For release `0.1.12`, the version output starts with `orchid 0.1.12`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
+For release `0.1.13`, the version output starts with `orchid 0.1.13`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
 
 ## 4. Create and trust Orchid's local certificate
 
 ### Why this is required
 
-HTTPS normally prevents an intermediary from reading a request. Orchid creates a private local certificate authority (CA) so the one client it launches can establish an encrypted connection to Orchid. Orchid then creates a separate encrypted connection to the real provider.
+HTTPS normally prevents an intermediary from reading a request. Orchid creates a private local certificate authority (CA) so the client or attached agent process tree it launches can establish encrypted connections to Orchid. Orchid then creates separate encrypted connections to the real providers.
 
 Orchid creates the CA locally and never changes Keychain trust without an explicit confirmation.
 
