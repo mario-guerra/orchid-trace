@@ -36,7 +36,7 @@ A provider key pays for live model requests. It is different from `ORCHID_API_KE
 
 ## 1. Verify the download
 
-Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.5`; do not type the angle brackets.
+Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.12`; do not type the angle brackets.
 
 ```bash
 cd ~/Downloads
@@ -75,7 +75,26 @@ Expected results include:
 
 Stop if either command fails. Do not bypass a Gatekeeper warning for an unverified build.
 
-## 3. Set a shorter command name
+## 3. Run the Desktop UI qualification
+
+Open **Orchid** from Applications. The primary flow requires no setup or startup commands:
+
+1. In **Settings**, choose **Prepare local CA**. Confirm that the displayed SHA-256 fingerprint contains no private-key material.
+2. Choose **Review login-Keychain trust**, then approve the native dialog. The dialog must name the exact fingerprint, operation, and current-user login-Keychain scope.
+3. Return to **Home**, choose a project with the native folder picker, optionally enter a session name and known-cost guard, and select **Launch Claude Code** only after every preflight item says Ready.
+4. Verify the terminal receives keyboard input, resizes with the window, and returns focus to the controls with Control-Option-O. Confirm that capture is described as limited to the launched process tree.
+5. Submit one harmless prompt, open **Inspector**, and confirm the captured exchange appears. Stop the session and verify the UI reports cleanup rather than only process exit.
+6. In **History**, open the capture in Inspector. Then select **Replay** on Home, choose that immutable source, leave miss fallback off, and launch a distinct run. A replay miss must fail locally; enabling fallback may contact the provider and records any miss in the new run.
+7. In **Settings**, export redacted diagnostics to a new file. Confirm it contains build/platform, database-health schema, and lifecycle audit metadata but no prompt, response, terminal text, credentials, private key, or project path.
+8. Optionally enable **Advanced: unverified custom terminal**. Confirm it is clearly unverified, accepts no startup command, and launches only the approved login shell in the selected project. Disable it after testing.
+9. Test keyboard-only operation and 200% zoom. If VoiceOver is available, verify controls have useful names and terminal output is not announced line by line.
+10. Review trust removal in Settings and cancel the native confirmation once to verify no mutation. Approve it only when the test is complete.
+
+Normal app deletion does not remove the login-Keychain trust entry, local CA, captures, policy, audit, or preferences. Remove trust explicitly in Settings before uninstalling when desired. Local data remains owner-private under Orchid's application-data directory until explicitly removed.
+
+The remaining CLI procedure is a diagnostic and compatibility fallback; it is not required for the primary Desktop flow.
+
+## CLI fallback: Set a shorter command name
 
 The executable is inside the application bundle. Define `ORCHID` once in each new terminal:
 
@@ -91,7 +110,7 @@ Confirm that the application starts:
 "$ORCHID" profile list
 ```
 
-For release `0.1.5`, the version output starts with `orchid 0.1.5`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
+For release `0.1.12`, the version output starts with `orchid 0.1.12`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
 
 ## 4. Create and trust Orchid's local certificate
 
