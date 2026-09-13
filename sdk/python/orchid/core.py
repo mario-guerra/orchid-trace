@@ -469,6 +469,10 @@ def init():
         # fixed-port reverse-proxy protocol and must remain disabled in this mode.
         _offline_fallback = True
         os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] = "True"
+        # LangChain's Vertex integration defaults to gRPC even when this environment
+        # preference is set. Install the existing client hook so imports after init()
+        # select REST, which can use the Desktop CONNECT transport.
+        _patch_loaded_and_future_google_clients()
         return
 
     proxy_url = os.environ.get("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")

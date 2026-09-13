@@ -115,7 +115,7 @@ When you run `orchid.init()`, the SDK dynamically monkeypatches the standard req
 The SDK is built to be resilient. During initialization, the SDK performs a fast health check on the Orchid Query service. 
 * If the proxy or control service is **offline**, the SDK silently falls back to direct routing. None of the client patches are active, and environment base URLs are not modified.
 * If a patch is active but the proxy goes offline mid-session, transport layers catch connection failures, log a warning, case-insensitively purge internal Orchid headers (preventing key leakage), and seamlessly retry the request directly to the upstream public API.
-* In an Orchid Desktop terminal, the SDK detects the controller-owned launch proxy and uses the standard proxy environment directly. It does not probe or rewrite traffic to the standalone service ports `4320` and `4321`. Capture or Replay mode must match the mode selected before opening the terminal.
+* In an Orchid Desktop terminal, the SDK detects the controller-owned launch proxy and uses the standard proxy environment directly. It does not probe or rewrite traffic to the standalone service ports `4320` and `4321`. It also forces Google Vertex AI clients imported after `init()` to use REST rather than gRPC, because REST is compatible with the launch-scoped CONNECT transport. Capture or Replay mode must match the mode selected before opening the terminal.
 
 ---
 

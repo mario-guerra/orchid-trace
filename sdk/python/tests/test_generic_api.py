@@ -13,6 +13,12 @@ def test_desktop_proxy_bypasses_legacy_fixed_port_routing(monkeypatch):
     monkeypatch.setenv("HTTPS_PROXY", "http://orchid:secret@127.0.0.1:54321")
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.setattr(orchid.core, "_offline_fallback", False)
+    patched_google_clients = []
+    monkeypatch.setattr(
+        orchid.core,
+        "_patch_loaded_and_future_google_clients",
+        lambda: patched_google_clients.append(True),
+    )
     monkeypatch.setattr(
         urllib.request,
         "urlopen",
@@ -22,6 +28,7 @@ def test_desktop_proxy_bypasses_legacy_fixed_port_routing(monkeypatch):
     init()
 
     assert orchid.core._offline_fallback is True
+    assert patched_google_clients == [True]
     assert "OPENAI_BASE_URL" not in os.environ
     assert os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] == "True"
     with session("desktop-capture", mode="capture"):
