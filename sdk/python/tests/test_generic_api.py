@@ -3,6 +3,34 @@ import pytest
 import urllib.parse
 from orchid.core import init, session, _should_intercept
 
+
+def test_desktop_proxy_bypasses_legacy_fixed_port_routing(monkeypatch):
+    import orchid.core
+
+    monkeypatch.setenv("ORCHID_DESKTOP_PROXY", "1")
+    monkeypatch.setenv("ORCHID_MODE", "capture")
+    monkeypatch.setenv("HTTP_PROXY", "http://orchid:secret@127.0.0.1:54321")
+    monkeypatch.setenv("HTTPS_PROXY", "http://orchid:secret@127.0.0.1:54321")
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.setattr(orchid.core, "_offline_fallback", False)
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: pytest.fail("desktop mode must not probe the legacy query port"),
+    )
+
+    init()
+
+    assert orchid.core._offline_fallback is True
+    assert "OPENAI_BASE_URL" not in os.environ
+    assert os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] == "True"
+    with session("desktop-capture", mode="capture"):
+        pass
+    with pytest.raises(RuntimeError, match="launched this terminal in capture mode"):
+        with session("legacy-replay", mode="replay"):
+            pass
+
+
 def test_should_intercept_wildcard(monkeypatch):
     monkeypatch.setenv("ORCHID_CAPTURE_DOMAINS", "*")
     monkeypatch.delenv("ORCHID_IGNORE_DOMAINS", raising=False)

@@ -394,6 +394,12 @@ def session(session_id: str, mode: str = "capture"):
     :param mode: The interception mode. Supported values: 'capture' (record traffic),
                  'replay' (return mocks), or 'passthrough' (do nothing).
     """
+    desktop_mode = os.environ.get("ORCHID_MODE")
+    if os.environ.get("ORCHID_DESKTOP_PROXY") == "1" and desktop_mode and mode != desktop_mode:
+        raise RuntimeError(
+            f"Orchid desktop launched this terminal in {desktop_mode} mode, but the SDK requested {mode} mode. "
+            f"Start a {mode} terminal from Orchid instead."
+        )
     token_id = orchid_session_id.set(session_id)
     token_mode = orchid_mode.set(mode)
     try:
@@ -455,6 +461,16 @@ def init():
         except ImportError:
             pass
     
+    if os.environ.get("ORCHID_DESKTOP_PROXY") == "1":
+        if not os.environ.get("HTTP_PROXY") or not os.environ.get("HTTPS_PROXY"):
+            raise RuntimeError("Orchid desktop proxy configuration is incomplete")
+        # The desktop owns an authenticated, launch-scoped CONNECT proxy. Provider libraries use
+        # the standard proxy environment directly; legacy SDK URL rewriting targets a different,
+        # fixed-port reverse-proxy protocol and must remain disabled in this mode.
+        _offline_fallback = True
+        os.environ["GOOGLE_CLOUD_DISABLE_GRPC"] = "True"
+        return
+
     proxy_url = os.environ.get("ORCHID_PROXY_URL", "http://127.0.0.1:4320/v1")
     
     parsed = urllib.parse.urlparse(proxy_url)
