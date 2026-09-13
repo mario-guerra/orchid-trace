@@ -36,7 +36,7 @@ A provider key pays for live model requests. It is different from `ORCHID_API_KE
 
 ## 1. Verify the download
 
-Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.15`; do not type the angle brackets.
+Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.16`; do not type the angle brackets.
 
 ```bash
 cd ~/Downloads
@@ -110,7 +110,7 @@ Confirm that the application starts:
 "$ORCHID" profile list
 ```
 
-For release `0.1.15`, the version output starts with `orchid 0.1.15`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
+For release `0.1.16`, the version output starts with `orchid 0.1.16`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
 
 ## 4. Create and trust Orchid's local certificate
 
