@@ -12,9 +12,9 @@ No knowledge of proxies or certificates is required. Read each explanation befor
 Orchid launches a supported client with temporary network settings. Traffic from that launched process goes through a local proxy that:
 
 1. accepts connections only from the launch Orchid created;
-2. reads requests only for Orchid's built-in provider hosts or exact DNS hosts you explicitly enroll;
-3. sends capture requests to the real provider and stores the response locally; and
-4. can later replay a matching response without contacting the provider.
+2. defaults to **Launch only**, which forwards HTTPS without decrypting it;
+3. after a native confirmation for that exact launch, can inspect eligible public HTTPS traffic from that process tree; and
+4. stores supported provider captures normally, while unknown or provider-unhandled JSON/JSON-SSE traffic is inspect-only and never replayable.
 
 Orchid does **not** record every application on the Mac. Closing the launched command removes its temporary proxy context.
 
@@ -36,7 +36,7 @@ A provider key pays for live model requests. It is different from `ORCHID_API_KE
 
 ## 1. Verify the download
 
-Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.1.17`; do not type the angle brackets.
+Open Terminal and change to the directory containing both downloaded files. Replace `<version>` with the release number, such as `0.2.0`; do not type the angle brackets.
 
 ```bash
 cd ~/Downloads
@@ -81,10 +81,10 @@ Open **Orchid** from Applications. Verified clients launch directly; custom agen
 
 1. In **Settings**, choose **Prepare local CA**. Confirm that the displayed SHA-256 fingerprint contains no private-key material.
 2. Choose **Review login-Keychain trust**, then approve the native dialog. The dialog must name the exact fingerprint, operation, and current-user login-Keychain scope.
-3. Return to **Launch**, choose **My own agent or CLI** or **Verified Claude Code**, select a project with the native folder picker, choose Capture or Replay, and optionally enter a session name and known-cost guard. For Replay, select the immutable source before launch. For a custom agent, approve the unverified terminal boundary, open the agent terminal, and enter the project's normal start command there. SDK-instrumented Python agents automatically use this launch-scoped desktop transport instead of probing the legacy fixed ports. For Vertex AI, initialize Orchid before importing client libraries; Orchid selects the supported REST transport for the launch.
-4. Verify the terminal receives keyboard input, resizes with the window, and returns focus to the controls with Control-Option-O. Confirm that capture is described as limited to the launched process tree.
-5. Submit one harmless prompt, open **Inspector**, and confirm the captured exchange appears. Stop the session and verify the UI reports cleanup rather than only process exit.
-6. In **History**, open the capture in Inspector. Then select **Replay** on Launch, choose that immutable source, leave miss fallback off, and launch a distinct run. A replay miss must fail locally; enabling fallback may contact the provider and records any miss in the new run.
+3. Return to **Launch**, choose **My own agent or CLI** or **Verified Claude Code**, select a project with the native folder picker, then choose **Launch only**, **Inspect live HTTPS**, or **Replay**. Launch only is the default and does not decrypt HTTPS. Inspect live HTTPS and Replay require a native confirmation bound to that exact launch; Replay also requires an immutable source. For a custom agent, approve the unverified terminal boundary, open the agent terminal, and enter the project's normal start command there.
+4. For inspection, read and approve the native disclosure. It applies only to the launched process tree and eligible public HTTPS destinations. It is not a system-wide network recorder. Verify the terminal receives keyboard input, resizes with the window, and returns focus to the controls with Control-Option-O.
+5. Submit one harmless prompt, open **Inspector**, and confirm the captured exchange appears. Unknown or provider-unhandled valid JSON/JSON-SSE rows are labeled **Not replayable** and either show `Content captured · expires in …`, `Metadata only`, or `Content expired`. Do not use sensitive production prompts: key-name redaction is not DLP.
+6. In **History**, open a provider capture in Inspector. Then select **Replay** on Launch, choose that immutable source, leave miss fallback off, and launch a distinct run. A replay miss must fail locally; enabling fallback may contact the provider and records any miss in the new run. Generic inspect-only rows cannot be replayed.
 7. In **Settings**, export redacted diagnostics to a new file. Confirm it contains build/platform, database-health schema, and lifecycle audit metadata but no prompt, response, terminal text, credentials, private key, or project path.
 8. For a custom agent, confirm child processes using Anthropic, OpenAI, OpenRouter's OpenAI-compatible `/api/v1` endpoint, and Vertex REST remain within the launched process tree and appear in the same capture. gRPC traffic is inspect-only and detached descendants are outside guaranteed cleanup.
 9. Test keyboard-only operation and 200% zoom. If VoiceOver is available, verify controls have useful names and terminal output is not announced line by line.
@@ -110,7 +110,7 @@ Confirm that the application starts:
 "$ORCHID" profile list
 ```
 
-For release `0.1.17`, the version output starts with `orchid 0.1.17`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
+For release `0.2.0`, the version output starts with `orchid 0.2.0`. The profile list shows the exact supported client versions. A nearby or newer version is not automatically supported.
 
 ## 4. Create and trust Orchid's local certificate
 
@@ -193,18 +193,28 @@ Orchid checks the subtotal before each captured request. If a previous call has 
 
 This is a pre-request threshold, not a reservation: a request that starts below the limit can exceed it, and concurrent requests can jointly exceed it. It does not cap the provider invoice. Remove the setting with `unset ORCHID_SESSION_BUDGET_USD` when the test ends.
 
-### Optional: enroll another exact host
+### Optional: narrow public-HTTPS inspection
 
-The built-in exact hosts are `api.openai.com`, `api.anthropic.com`, and the direct Gemini Developer API host `generativelanguage.googleapis.com`. They seed new and legacy policies by default. A policy that already contains an explicit enrollment list remains unchanged, so add the Gemini host manually if it is absent. To capture another HTTPS API, enroll its exact DNS host before starting the child process:
+New policies explicitly allow eligible public HTTPS hosts. Existing unmarked policies remain **legacy exact** and are never broadened automatically. Check the state before an inspected launch:
 
 ```bash
-"$ORCHID" interception add api.example.com
-"$ORCHID" interception list
+"$ORCHID" policy include status
 ```
 
-Enrollment accepts exact public DNS names only—never wildcards, IP literals, single-label names, or `.local` names. DNS is checked on every connection, and the entire connection is rejected if any answer is private or otherwise non-public. `interception remove api.example.com` restores opaque tunneling for future launches. `policy deny` temporarily disables an enrolled host; policy changes never alter an already-running launch.
+To restrict future inspected launches to exact hosts, use an include list. Exact names only are accepted—never wildcards, IP literals, single-label names, or `.local` names:
 
-A legacy policy file without an enrollment list starts with the built-in provider hosts. Its first policy update writes an explicit sorted list. An explicitly empty list stays empty.
+```bash
+"$ORCHID" policy include add api.example.com
+"$ORCHID" policy include status
+```
+
+An explicitly empty exact list blocks all inspected hosts. `policy deny` and `policy pause` override both all-public and exact policies. To broaden an exact policy to eligible public HTTPS hosts, make the separate deliberate decision:
+
+```bash
+"$ORCHID" policy include clear --yes
+```
+
+DNS is evaluated for every inspected connection. A non-443 destination, invalid authority, private/special/mixed DNS answer, stale address policy, or denied/paused host is rejected before Orchid opens an upstream socket. Policy changes affect future launches only. The legacy `interception` commands remain aliases during the compatibility window; use `policy include` for new automation.
 
 ## 6. Capture one live request
 
@@ -221,13 +231,15 @@ printf '%s\n' 'Reply exactly: orchid.' |
   "$ORCHID" run \
     --session personal-beta-test \
     --mode capture \
-    --intercept-tls \
+    --capture-public-https \
     -- /opt/homebrew/bin/claude -p \
       --model haiku \
       --tools '' \
       --permission-mode dontAsk \
       --output-format json
 ```
+
+At an attended terminal, Orchid asks for an explicit version-2 inspection confirmation. For noninteractive automation, pass `--accept-capture-risk-version=2` with `--capture-public-https`; the flag records deliberate operator configuration but does not prove a person read the notice. `--intercept-tls` is a deprecated alias and should not be used in new scripts.
 
 This is a real provider call and may incur a small charge. A successful result contains:
 
@@ -264,7 +276,7 @@ Recordings are stored at:
 ~/Library/Application Support/Orchid/orchid.db
 ```
 
-Treat this database as private because it can contain prompts and responses.
+Treat this database as private because it can contain prompts and responses. Generic inspect-only JSON/JSON-SSE content is available through authenticated Inspector/Query for up to 24 hours, then is suppressed and purged; unsupported, malformed, incomplete, oversized, binary, multipart, WebSocket, and gRPC unknown payloads are metadata-only. Expiry is not a guarantee for screenshots, clipboard contents, backups, filesystem snapshots, or external copies.
 
 ## 8. Replay without another provider call
 
@@ -274,9 +286,10 @@ Use the same directory, session name, prompt, client version, and command option
 cd /path/to/your/project
 printf '%s\n' 'Reply exactly: orchid.' |
   "$ORCHID" run \
-    --session personal-beta-test \
+    --session personal-beta-replay \
+    --replay-source-session personal-beta-test \
     --mode replay \
-    --intercept-tls \
+    --capture-public-https \
     -- /opt/homebrew/bin/claude -p \
       --model haiku \
       --tools '' \
@@ -303,6 +316,10 @@ Pausing affects future launches. Existing processes keep the policy snapshot wit
 ```
 
 When paused, new launches use opaque HTTPS tunnels and are not captured or replayed.
+
+### Disable inspected launches and purge generic content
+
+Set `ORCHID_DESKTOP_PUBLIC_HTTPS_CAPTURE_V1=false` before starting Orchid to disable new inspected/replay launches. Orchid retains **Launch only** and purges generic inspect-only bodies before it exposes the database. This is the rollback/kill-switch path; it does not erase normal provider captures or externally copied content. Re-enable only after the release owner approves the issue resolution.
 
 ## 10. Diagnose a problem
 
@@ -363,15 +380,15 @@ A personal beta test is complete when all boxes are true:
 
 ## Protocol and capability matrix
 
-| Traffic from an enrolled host | Forwarding and capture | Semantic decoding | Replay |
+| Inspected traffic | Forwarding and capture | Semantic decoding | Replay |
 | --- | --- | --- | --- |
-| HTTP/1.1 | Supported | Provider adapter when available; otherwise generic request/response data | Supported only for complete, bounded, replayable captures |
-| HTTP/2 | Supported after TLS ALPN | Same as HTTP/1.1 | Same request-level constraints as HTTP/1.1 |
-| Server-Sent Events | Forwarded live | Provider-specific; unknown providers retain the UTF-8 event stream without claiming semantic decoding | Supported only when the stream completes within the capture limit |
-| gRPC unary | Forwarded over intercepted HTTP/2; request and response messages plus trailers are captured | Protobuf payload stays opaque without descriptors; compression flags and message lengths are recorded | Inspect-only; replay fails with `422` and `X-Orchid-Replay-Unsupported` |
-| gRPC server streaming | Forwarded with bounded backpressure; ordered response messages and trailers are captured | Same descriptor-free framing capture as unary | Inspect-only; replay fails loudly |
-| gRPC client streaming or bidirectional streaming | Forwarded without changing wire data, then explicitly marked unsupported when multiple request messages are observed | Framing remains inspectable, but Orchid does not claim supported RPC semantics | Unsupported |
-| WebSocket Upgrade | HTTP/1.1 upgrades are forwarded and bounded frame transcripts are captured | Frame-level only; payload semantics are not inferred | Inspect-only |
+| HTTP/1.1 | Supported for eligible public HTTPS | Provider adapter when available; unknown valid JSON is scrubbed and inspect-only | Provider records only; generic records are never replayable |
+| HTTP/2 | Supported after TLS ALPN | Same provider/generic JSON policy as HTTP/1.1 | Provider records only |
+| Server-Sent Events | Forwarded live | Provider-specific; unknown JSON SSE is scrubbed and inspect-only | Provider records only |
+| gRPC unary | Forwarded over intercepted HTTP/2 | Unknown payload transcripts are metadata-only | Inspect-only; replay fails with `422` and `X-Orchid-Replay-Unsupported` |
+| gRPC server streaming | Forwarded with bounded backpressure | Unknown payload transcripts are metadata-only | Inspect-only; replay fails loudly |
+| gRPC client streaming or bidirectional streaming | Forwarded without changing wire data, then explicitly marked unsupported when multiple request messages are observed | Unknown payload transcripts are metadata-only | Unsupported |
+| WebSocket Upgrade | HTTP/1.1 upgrades are forwarded | Unknown payload transcripts are metadata-only | Inspect-only |
 | Cooperative browser WebRTC | Media remains peer-to-peer; the optional browser SDK records lifecycle, privacy-reduced ICE/TURN and RTP summaries, plus application-supplied transcript/tool/timing events | No SDP, candidate addresses, media samples, or transparent SRTP inspection | Unsupported |
 | Tunneled CONNECT inside intercepted TLS | Rejected with `501` | Unsupported | Unsupported |
 | HTTP/3 and QUIC | Not intercepted by this TCP CONNECT proxy | Unsupported | Unsupported |
